@@ -1,13 +1,21 @@
 ﻿import asyncio
-from sqlalchemy import text
+import sys
 
-from clincore.db import session_scope
+# 👇 مهم برای Windows
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+from sqlalchemy import text
+from clincore.db import AsyncSessionFactory
 
 
 async def main():
-    async with session_scope() as s:
-        res = await s.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;"))
-        print("TABLES:", [r[0] for r in res.all()])
+    async with AsyncSessionFactory() as session:
+        result = await session.execute(
+            text("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;")
+        )
+        tables = [row[0] for row in result.fetchall()]
+        print("TABLES:", tables)
 
 
 if __name__ == "__main__":
