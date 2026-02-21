@@ -1,0 +1,36 @@
+[project]
+name = "clincore-platform"
+version = "0.1.0"
+description = "ClinCore multi-tenant RLS-first core platform (Phase1 Lite)"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "pydantic>=2.6",
+  "pydantic-settings>=2.2",
+  "SQLAlchemy[asyncio]>=2.0.25",
+  "asyncpg>=0.29",
+  "alembic>=1.13",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "httpx>=0.26",
+  "import-linter>=2.0",
+  "ruff>=0.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

@@ -1,0 +1,10 @@
+﻿.env
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+src/clincore/mcare_engine/data/*.db
+
+src/clincore/mcare_engine/data/

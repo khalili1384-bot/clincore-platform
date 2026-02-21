@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: clincore-platform
+Version: 0.1.0
+Summary: ClinCore multi-tenant RLS-first core platform (Phase1 Lite)
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn[standard]>=0.27
+Requires-Dist: pydantic>=2.6
+Requires-Dist: pydantic-settings>=2.2
+Requires-Dist: SQLAlchemy[asyncio]>=2.0.25
+Requires-Dist: asyncpg>=0.29
+Requires-Dist: alembic>=1.13
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+Requires-Dist: httpx>=0.26; extra == "dev"
+Requires-Dist: import-linter>=2.0; extra == "dev"
+Requires-Dist: ruff>=0.2; extra == "dev"

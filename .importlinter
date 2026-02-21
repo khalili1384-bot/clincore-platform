@@ -1,0 +1,25 @@
+[importlinter]
+root_package = app
+
+[importlinter:contract:1]
+name = Core must not import modules
+type = forbidden
+source_modules =
+    app.core
+forbidden_modules =
+    app.modules
+
+[importlinter:contract:2]
+name = Modules may only import core contracts/shared (no core internals)
+type = forbidden
+source_modules =
+    app.modules
+forbidden_modules =
+    app.core.db
+    app.core.repositories
+
+[importlinter:contract:3]
+name = Modules are independent
+type = independence
+modules =
+    app.modules
