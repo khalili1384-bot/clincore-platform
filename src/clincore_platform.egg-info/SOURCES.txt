@@ -25,3 +25,4 @@ src/clincore_platform.egg-info/requires.txt
 src/clincore_platform.egg-info/top_level.txt
 tests/test_db_access_is_wrapper_only.py
 tests/test_rls_fail_closed.py
+tests/test_rls_hard.py
