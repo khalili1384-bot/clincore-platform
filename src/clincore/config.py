@@ -6,6 +6,9 @@ from pydantic import field_validator
 
 
 class Settings(BaseSettings):
+    DATABASE_URL: str
+    REPERTORY_DB_PATH: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -15,9 +18,6 @@ class Settings(BaseSettings):
     APP_NAME: str = "ClinCore Platform"
     ENV: str = "development"
     DEBUG: bool = True
-
-    # No default → must come from .env
-    DATABASE_URL: str
 
     @field_validator("DATABASE_URL")
     @classmethod

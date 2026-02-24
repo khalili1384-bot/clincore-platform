@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>ClinCore — Homeopathy (MCARE) Clinical UI</title>
+  <style>
+    body{font-family:Tahoma,Arial,sans-serif;margin:18px;background:#fafafa}
+    .card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px;margin-bottom:14px}
+    textarea,input,select,button{font-size:14px}
+    textarea{width:100%;min-height:130px;padding:10px;border-radius:8px;border:1px solid #ccc}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > div{flex:1;min-width:220px}
+    button{padding:10px 12px;border:0;border-radius:8px;cursor:pointer}
+    button.primary{background:#1f6feb;color:#fff}
+    button.secondary{background:#eee}
+    pre{background:#0b1020;color:#dbeafe;padding:10px;border-radius:8px;overflow:auto}
+    .small{color:#666;font-size:12px}
+    label{display:block;margin:6px 0 6px}
+    .pill{display:inline-block;background:#eef;border:1px solid #ccd;padding:4px 8px;border-radius:999px;margin:4px 6px 0 0;font-size:12px}
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h3>Homeopathy Clinical UI (Deterministic Engine)</h3>
+  <div class="small">
+    مسیر کار: شرح‌حال → Extract Rubrics (Rule-based, MIND-first) → Map to IDs → Run Engine → Save Case (JSONL)
+  </div>
+</div>
+
+<div class="card">
+  <h4>1) شرح حال / متن فرم</h4>
+  <textarea id="narrative" placeholder="شرح حال را اینجا Paste کن..."></textarea>
+
+  <div class="row" style="margin-top:10px">
+    <div>
+      <label>Course</label>
+      <select id="course">
+        <option value="chronic">chronic</option>
+        <option value="acute">acute</option>
+      </select>
+    </div>
+    <div>
+      <label>Case Type</label>
+      <select id="case_type">
+        <option value="AUTO">AUTO</option>
+        <option value="MIND_DOMINANT">MIND_DOMINANT</option>
+        <option value="CONSTITUTION">CONSTITUTION</option>
+        <option value="MIXED">MIXED</option>
+      </select>
+    </div>
+    <div>
+      <label>Top N</label>
+      <input id="top_n" type="number" value="10" min="1" max="50" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px"/>
+    </div>
+  </div>
+
+  <div style="margin-top:10px" class="row">
+    <div><button class="primary" onclick="extractRubrics()">Extract Rubrics</button></div>
+    <div><button class="secondary" onclick="mapToIds()">Map to IDs</button></div>
+    <div><button class="secondary" onclick="runEngine()">Run Engine</button></div>
+    <div><button class="primary" onclick="saveCase()">Save Case</button></div>
+  </div>
+</div>
+
+<div class="card">
+  <h4>2) Rubrics (متنی)</h4>
+  <div class="small">می‌توانی روبریک‌ها را ویرایش کنی (هر خط یک روبریک).</div>
+  <textarea id="rubrics" placeholder="Rubrics..."></textarea>
+  <div id="rubric_pills"></div>
+</div>
+
+<div class="card">
+  <h4>3) symptom_id ها</h4>
+  <textarea id="symptom_ids" placeholder="Symptom IDs (comma-separated یا هر خط)"></textarea>
+  <pre id="map_out">{}</pre>
+</div>
+
+<div class="card">
+  <h4>4) Ranking Output</h4>
+  <pre id="engine_out">{}</pre>
+</div>
+
+<div class="card">
+  <h4>5) Save Fields</h4>
+  <div class="row">
+    <div>
+      <label>Selected Remedy</label>
+      <input id="selected_remedy" type="text" placeholder="مثلاً caust" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px"/>
+    </div>
+    <div>
+      <label>Outcome (optional)</label>
+      <select id="outcome">
+        <option value="">(empty)</option>
+        <option value="resolved">resolved</option>
+        <option value="significantly_improved">significantly_improved</option>
+        <option value="mildly_improved">mildly_improved</option>
+        <option value="unchanged">unchanged</option>
+        <option value="aggravated">aggravated</option>
+        <option value="relapse">relapse</option>
+      </select>
+    </div>
+    <div>
+      <label>Followup Days (optional)</label>
+      <input id="followup_days" type="number" min="0" placeholder="مثلاً 14" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px"/>
+    </div>
+    <div>
+      <label>Confidence (1-5 optional)</label>
+      <input id="confidence" type="number" min="1" max="5" placeholder="1..5" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px"/>
+    </div>
+  </div>
+  <pre id="save_out">{}</pre>
+</div>
+
+<script>
+  function lines(text){
+    return text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  }
+  function showPills(){
+    const el = document.getElementById("rubric_pills");
+    el.innerHTML = "";
+    for (const r of lines(document.getElementById("rubrics").value)){
+      const s=document.createElement("span");
+      s.className="pill";
+      s.textContent=r;
+      el.appendChild(s);
+    }
+  }
+
+  async function extractRubrics(){
+    const narrative=document.getElementById("narrative").value;
+    const res = await fetch("/mcare/extract",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({narrative})
+    });
+    const data=await res.json();
+    document.getElementById("rubrics").value = (data.rubrics||[]).join("\n");
+    showPills();
+  }
+
+  async function mapToIds(){
+    const rubrics = lines(document.getElementById("rubrics").value);
+    const res = await fetch("/mcare/map",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({rubrics})
+    });
+    const data=await res.json();
+    document.getElementById("map_out").textContent = JSON.stringify(data,null,2);
+
+    const ids = (data.mapped||[]).map(x=>x.symptom_id).filter(Boolean);
+    document.getElementById("symptom_ids").value = ids.join(",");
+  }
+
+  async function runEngine(){
+    const idsText=document.getElementById("symptom_ids").value;
+    const symptom_ids = idsText.split(/[\s,]+/).map(x=>x.trim()).filter(Boolean).map(x=>parseInt(x,10));
+    const course=document.getElementById("course").value;
+    const case_type=document.getElementById("case_type").value;
+    const top_n=parseInt(document.getElementById("top_n").value,10)||10;
+
+    const res = await fetch("/mcare/score",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({symptom_ids, course, case_type, top_n})
+    });
+    const data=await res.json();
+    document.getElementById("engine_out").textContent = JSON.stringify(data,null,2);
+
+    // convenience: prefill selected_remedy with top1
+    if (data.top10 && data.top10.length>0){
+      document.getElementById("selected_remedy").value = data.top10[0].remedy || "";
+    }
+  }
+
+  async function saveCase(){
+    const symptom_ids = document.getElementById("symptom_ids").value
+      .split(/[\s,]+/).map(x=>x.trim()).filter(Boolean).map(x=>parseInt(x,10));
+
+    const selected_remedy=document.getElementById("selected_remedy").value.trim();
+    const outcome=document.getElementById("outcome").value || null;
+    const followup_days_raw=document.getElementById("followup_days").value;
+    const confidence_raw=document.getElementById("confidence").value;
+
+    const followup_days = followup_days_raw ? parseInt(followup_days_raw,10) : null;
+    const confidence_physician = confidence_raw ? parseInt(confidence_raw,10) : null;
+
+    const course=document.getElementById("course").value;
+    const case_type=document.getElementById("case_type").value;
+    const top_n=parseInt(document.getElementById("top_n").value,10)||10;
+
+    const rubrics = lines(document.getElementById("rubrics").value);
+
+    const res = await fetch("/mcare/save",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({symptom_ids, rubrics, selected_remedy, outcome, followup_days, confidence_physician, course, case_type, top_n})
+    });
+    const data=await res.json();
+    document.getElementById("save_out").textContent = JSON.stringify(data,null,2);
+  }
+
+  document.getElementById("rubrics").addEventListener("input", showPills);
+</script>
+
+</body>
+</html>

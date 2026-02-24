@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MCARE Engine</title>
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #fafafa;
+    margin: 40px;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    max-width: 700px;
+}
+
+textarea {
+    width: 100%;
+    height: 80px;
+    padding: 8px;
+    font-size: 14px;
+}
+
+input {
+    padding: 6px;
+    width: 80px;
+}
+
+button {
+    padding: 8px 14px;
+    background: #444;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #222;
+}
+
+table {
+    margin-top: 20px;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    text-align: left;
+    background: #f0f0f0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h2>MCARE Clinical Ranking</h2>
+
+<label>Symptom IDs</label><br>
+<textarea id="symptoms">13401754,13401755,13401756</textarea><br><br>
+
+<label>Top N:</label>
+<input type="number" id="topn" value="10"><br><br>
+
+<button onclick="run()">Run</button>
+
+<div id="results"></div>
+</div>
+
+<script>
+async function run() {
+    const ids = document.getElementById("symptoms").value
+        .split(",")
+        .map(x => parseInt(x.trim()))
+        .filter(x => !isNaN(x));
+
+    const topn = parseInt(document.getElementById("topn").value);
+
+    const res = await fetch("/score", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ symptom_ids: ids, top_n: topn })
+    });
+
+    const data = await res.json();
+
+    if (!data.results) {
+        document.getElementById("results").innerHTML = "Error.";
+        return;
+    }
+
+    let html = "<table><tr><th>#</th><th>Remedy</th><th>Score</th></tr>";
+
+    data.results.forEach((r, i) => {
+        html += `<tr>
+            <td>${i+1}</td>
+            <td>${r.remedy}</td>
+            <td>${r.mcare_score.toFixed(6)}</td>
+        </tr>`;
+    });
+
+    html += "</table>";
+
+    document.getElementById("results").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
