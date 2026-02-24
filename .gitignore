@@ -1,10 +1,38 @@
-﻿.env
+﻿# =========================
+# Environment
+# =========================
+.env
+.env.*
 venv/
 .venv/
+
+# =========================
+# Python
+# =========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# =========================
+# Pytest
+# =========================
 .pytest_cache/
 
+# =========================
+# Local databases (AI engine data)
+# =========================
 src/clincore/mcare_engine/data/*.db
+src/clincore/mcare_engine/data/*.sqlite3
 
-src/clincore/mcare_engine/data/
+# Keep directory but ignore contents
+src/clincore/mcare_engine/data/*
+!src/clincore/mcare_engine/data/.gitkeep
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

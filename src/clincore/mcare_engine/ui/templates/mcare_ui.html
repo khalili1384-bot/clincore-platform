@@ -1,122 +1,277 @@
-<!DOCTYPE html>
-<html>
+﻿<!doctype html>
+<html lang="fa" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>MCARE Engine</title>
-<style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #fafafa;
-    margin: 40px;
-}
-
-h2 {
-    margin-bottom: 20px;
-}
-
-.card {
-    background: white;
-    padding: 25px;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    max-width: 700px;
-}
-
-textarea {
-    width: 100%;
-    height: 80px;
-    padding: 8px;
-    font-size: 14px;
-}
-
-input {
-    padding: 6px;
-    width: 80px;
-}
-
-button {
-    padding: 8px 14px;
-    background: #444;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #222;
-}
-
-table {
-    margin-top: 20px;
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th, td {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-}
-
-th {
-    text-align: left;
-    background: #f0f0f0;
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ClinCore — MCARE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .num { font-variant-numeric: tabular-nums; }
+  </style>
 </head>
 
-<body>
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-screen">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-slate-900 text-white grid place-items-center font-bold">CC</div>
+          <div>
+            <div class="font-semibold">ClinCore — MCARE</div>
+            <div class="text-xs text-slate-500">Scoring + ذخیرهسازی کیسهای بالینی</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span class="px-2 py-1 rounded-full bg-slate-100 border border-slate-200">Local</span>
+          <span id="apiBase" class="num"></span>
+        </div>
+      </div>
+    </header>
 
-<div class="card">
-<h2>MCARE Clinical Ranking</h2>
+    <main class="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Left: form -->
+      <section class="lg:col-span-5">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-200">
+            <h2 class="font-semibold">ورود روبریکها</h2>
+            <p class="text-sm text-slate-500 mt-1">symptom_id ها را وارد کن. وزن اختیاری است (پیشفرض 1).</p>
+          </div>
 
-<label>Symptom IDs</label><br>
-<textarea id="symptoms">13401754,13401755,13401756</textarea><br><br>
+          <div class="p-5 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-slate-600">Tenant ID</label>
+                <input id="tenantId" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20"
+                       placeholder="مثال: 11111111-1111-1111-1111-111111111111" />
+                <p class="text-xs text-slate-500 mt-1">برای RLS/ایزولهسازی اجباری است.</p>
+              </div>
 
-<label>Top N:</label>
-<input type="number" id="topn" value="10"><br><br>
+              <div>
+                <label class="text-sm text-slate-600">Top N</label>
+                <input id="topN" type="number" min="1" max="100" value="10"
+                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20" />
+                <p class="text-xs text-slate-500 mt-1">پیشنهاد: 10 تا 20</p>
+              </div>
+            </div>
 
-<button onclick="run()">Run</button>
+            <div>
+              <label class="text-sm text-slate-600">Course</label>
+              <select id="course" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20">
+                <option value="acute">acute</option>
+                <option value="chronic">chronic</option>
+              </select>
+              <p class="text-xs text-slate-500 mt-1">الان engine شما course را lower() میکند پس خالی نباشد.</p>
+            </div>
 
-<div id="results"></div>
-</div>
+            <div>
+              <label class="text-sm text-slate-600">Case Type</label>
+              <select id="caseType" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20">
+                <option value="auto">auto</option>
+                <option value="mind_dominant">mind_dominant</option>
+                <option value="constitution">constitution</option>
+                <option value="mixed">mixed</option>
+              </select>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-slate-600">Rubrics (JSON)</label>
+                <button id="btnSample" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200">
+                  نمونه بگذار
+                </button>
+              </div>
+              <textarea id="rubricsJson" rows="9"
+                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-slate-900/20"
+                        placeholder='مثال:
+[
+  {"symptom_id": 13401754, "weight": 1},
+  {"symptom_id": 13401755, "weight": 1}
+]'></textarea>
+              <p class="text-xs text-slate-500 mt-1">کلیدها دقیقا همینها باشند: symptom_id, weight</p>
+            </div>
+
+            <div class="flex gap-3">
+              <button id="btnRun" class="flex-1 rounded-2xl bg-slate-900 text-white px-4 py-2.5 font-semibold hover:bg-slate-800">
+                اجرا / Score
+              </button>
+              <button id="btnClear" class="rounded-2xl bg-white border border-slate-300 px-4 py-2.5 hover:bg-slate-50">
+                پاککردن
+              </button>
+            </div>
+
+            <div id="status" class="text-sm text-slate-600"></div>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <h3 class="font-semibold">نکتههای سریع</h3>
+          <ul class="mt-2 text-sm text-slate-600 space-y-1 list-disc pr-5">
+            <li>اگر خطای <span class="font-mono">symptom_id</span> یا <span class="font-mono">weight</span> دیدی یعنی JSON درست نیست.</li>
+            <li>اگر دیتابیس SQLite اشتباه باشد engine ستون/جدولها را پیدا نمیکند.</li>
+            <li>اگر Postgres جدول ندارد فعلا فقط engine را تست کن persistence را بعد از migrate فعال میکنیم.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Right: results -->
+      <section class="lg:col-span-7">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 class="font-semibold">نتایج</h2>
+              <p class="text-sm text-slate-500 mt-1">لیست رمدیها + meta</p>
+            </div>
+            <div class="text-xs text-slate-500">
+              <span class="px-2 py-1 rounded-full bg-slate-100 border border-slate-200">JSON</span>
+            </div>
+          </div>
+
+          <div class="p-5">
+            <pre id="outJson" class="bg-slate-900 text-slate-100 rounded-2xl p-4 overflow-auto text-xs leading-relaxed"></pre>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-200">
+            <h3 class="font-semibold">جدول خلاصه</h3>
+            <p class="text-sm text-slate-500 mt-1">Top N به صورت جدول</p>
+          </div>
+          <div class="p-5 overflow-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-slate-600">
+                <tr class="border-b">
+                  <th class="text-right py-2">#</th>
+                  <th class="text-right py-2">Remedy</th>
+                  <th class="text-right py-2">mcare_score</th>
+                  <th class="text-right py-2">raw_score</th>
+                  <th class="text-right py-2">freq</th>
+                </tr>
+              </thead>
+              <tbody id="tblBody" class="text-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="max-w-6xl mx-auto px-4 py-8 text-xs text-slate-500">
+      ClinCore — Local MCARE UI · برای استفاده داخلی کلینیک
+    </footer>
+  </div>
 
 <script>
-async function run() {
-    const ids = document.getElementById("symptoms").value
-        .split(",")
-        .map(x => parseInt(x.trim()))
-        .filter(x => !isNaN(x));
+  const apiBase = location.origin;
+  document.getElementById("apiBase").textContent = apiBase;
 
-    const topn = parseInt(document.getElementById("topn").value);
+  const $ = (id) => document.getElementById(id);
 
-    const res = await fetch("/score", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ symptom_ids: ids, top_n: topn })
+  function setStatus(msg, isError=false) {
+    $("status").textContent = msg;
+    $("status").className = "text-sm " + (isError ? "text-red-600" : "text-slate-600");
+  }
+
+  function safeJsonParse(txt) {
+    try { return [JSON.parse(txt), null]; }
+    catch (e) { return [null, e]; }
+  }
+
+  $("btnSample").addEventListener("click", () => {
+    $("rubricsJson").value = JSON.stringify([
+      { symptom_id: 13401754, weight: 1 },
+      { symptom_id: 13401755, weight: 1 },
+      { symptom_id: 13401756, weight: 1 }
+    ], null, 2);
+    setStatus("نمونه قرار داده شد.");
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    $("rubricsJson").value = "";
+    $("outJson").textContent = "";
+    $("tblBody").innerHTML = "";
+    setStatus("پاک شد.");
+  });
+
+  function renderTable(results) {
+    const tbody = $("tblBody");
+    tbody.innerHTML = "";
+    results.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+      tr.className = "border-b last:border-b-0";
+      tr.innerHTML = `
+        <td class="py-2 num">${idx+1}</td>
+        <td class="py-2 font-medium">${r.remedy ?? ""}</td>
+        <td class="py-2 num">${r.mcare_score ?? ""}</td>
+        <td class="py-2 num">${r.raw_score ?? ""}</td>
+        <td class="py-2 num">${r.freq ?? ""}</td>
+      `;
+      tbody.appendChild(tr);
     });
+  }
 
-    const data = await res.json();
+  $("btnRun").addEventListener("click", async () => {
+    const tenantId = $("tenantId").value.trim();
+    const topN = Number($("topN").value || 10);
+    const caseType = $("caseType").value;
+    const course = $("course").value;
 
-    if (!data.results) {
-        document.getElementById("results").innerHTML = "Error.";
-        return;
+    if (!tenantId) {
+      setStatus("Tenant ID را وارد کن.", true);
+      return;
     }
 
-    let html = "<table><tr><th>#</th><th>Remedy</th><th>Score</th></tr>";
+    const [rubrics, err] = safeJsonParse($("rubricsJson").value.trim() || "[]");
+    if (err) {
+      setStatus("JSON نامعتبر است: " + err.message, true);
+      return;
+    }
+    if (!Array.isArray(rubrics) || rubrics.length < 1) {
+      setStatus("حداقل 1 rubric لازم است.", true);
+      return;
+    }
 
-    data.results.forEach((r, i) => {
-        html += `<tr>
-            <td>${i+1}</td>
-            <td>${r.remedy}</td>
-            <td>${r.mcare_score.toFixed(6)}</td>
-        </tr>`;
-    });
+    // Backward-compatible payload (این را با endpoint واقعیتان هماهنگ میکنیم)
+    const payload = {
+      case_df: rubrics,
+      top_n: topN,
+      case_type: caseType,
+      course: course
+    };
 
-    html += "</table>";
+    setStatus("در حال ارسال درخواست...");
+    $("outJson").textContent = "";
 
-    document.getElementById("results").innerHTML = html;
-}
+    try {
+      const res = await fetch("/mcare/score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": tenantId
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      $("outJson").textContent = JSON.stringify(data, null, 2);
+
+      if (!res.ok) {
+        setStatus("خطا: " + (data?.detail?.message || data?.detail || res.status), true);
+        $("tblBody").innerHTML = "";
+        return;
+      }
+
+      const results = data.results || [];
+      renderTable(results);
+      setStatus("انجام شد. تعداد نتایج: " + results.length);
+
+    } catch (e) {
+      setStatus("خطای شبکه/سرور: " + e.message, true);
+    }
+  });
 </script>
-
 </body>
 </html>
