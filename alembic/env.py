@@ -1,61 +1,40 @@
-﻿import asyncio
-from logging.config import fileConfig
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+﻿from logging.config import fileConfig
+from sqlalchemy import engine_from_config, pool
 from alembic import context
-import os
-import sys
-
-# FIX Windows event loop for psycopg async
-if sys.platform.startswith("win"):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 config = context.config
-
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+fileConfig(config.config_file_name)
 
 target_metadata = None
 
-
-def run_migrations_offline() -> None:
+def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
-
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-async def run_migrations_online() -> None:
-    connectable = async_engine_from_config(
+def run_migrations_online():
+    connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            compare_type=True,
+        )
 
-    await connectable.dispose()
+        with context.begin_transaction():
+            context.run_migrations()
 
-
-def run_migrations() -> None:
-    if context.is_offline_mode():
-        run_migrations_offline()
-    else:
-        asyncio.run(run_migrations_online())
-
-
-run_migrations()
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
