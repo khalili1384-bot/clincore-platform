@@ -4,3 +4,30 @@
 2026-02-23 00:15:08,781 | INFO | clincore.api | request_id=3f2474e2-c21d-45e4-a86c-977550a7ca71 method=GET path=/mcare status=200 ms=1.05
 2026-02-23 00:16:48,778 | INFO | clincore.api | request_id=feac408b-071e-456d-a1b8-96f3c6b3010e method=GET path=/mcare status=200 ms=4.17
 2026-02-23 00:16:51,539 | INFO | clincore.api | request_id=806a7db1-ca73-4d78-a2e5-56467e243a6d method=GET path=/mcare status=200 ms=0.74
+2026-02-25 10:56:13,765 | INFO | clincore.api | request_id=2219465c-9b68-4d76-995d-7dcb1d0a2563 method=POST path=/mcare/score status=200 ms=453.50
+2026-02-25 11:00:14,432 | INFO | clincore.api | request_id=fce73b53-3146-4d78-84c2-c1bb907eba19 method=POST path=/mcare/score status=200 ms=79.04
+2026-02-25 11:04:55,082 | INFO | clincore.api | request_id=9f498495-93ad-4566-8674-6dc56d7215ef method=POST path=/mcare/auto status=404 ms=0.32
+2026-02-25 11:11:20,067 | INFO | clincore.api | request_id=db50d472-4579-4297-87f6-49a5e75bbb17 method=GET path=/openapi.json status=200 ms=13.21
+2026-02-25 11:18:00,351 | INFO | clincore.api | request_id=e7407b94-0ee1-4470-933e-cee58097b7fc method=POST path=/mcare/auto status=200 ms=4.01
+2026-02-25 11:18:07,806 | INFO | clincore.api | request_id=32d4bbfb-fe06-40b7-a98e-6f87f9478976 method=GET path=/openapi.json status=200 ms=11.81
+2026-02-25 11:20:36,301 | ERROR | clincore.mcare.ui | AUTO_PIPELINE_FAILED
+Traceback (most recent call last):
+  File "D:\clincore-platform\src\clincore\mcare_engine\ui\router.py", line 260, in mcare_auto
+    db_path = _resolve_db_path()
+              ^^^^^^^^^^^^^^^^^^
+  File "D:\clincore-platform\src\clincore\mcare_engine\ui\router.py", line 162, in _resolve_db_path
+    raise RuntimeError(
+RuntimeError: Invalid repertory DB path. Expected usable SQLite with symptoms table; checked: src\clincore\mcare_engine\data\synthesis.db, src\clincore\mcare_engine\data\synthesis.135.db; last_error=Could not detect symptoms table/text column in synthesis.db
+2026-02-25 11:20:36,303 | INFO | clincore.api | request_id=3555d63a-34b7-4082-8765-620da3e5d258 method=POST path=/mcare/auto status=200 ms=35.09
+2026-02-25 11:31:52,487 | INFO | clincore.api | request_id=57cbb23f-d8af-4768-8a24-a23b10a04d61 method=GET path=/openapi.json status=200 ms=11.91
+2026-02-25 11:31:55,029 | INFO | clincore.api | request_id=2f02e516-4140-40cb-ad1f-81cf5d93fbc0 method=POST path=/mcare/map status=200 ms=1200.93
+2026-02-25 11:38:29,890 | INFO | clincore.api | request_id=9e6563a9-81d4-4de7-a337-bc5cfddffdbc method=POST path=/mcare/map status=200 ms=1136.63
+2026-02-25 11:38:50,240 | INFO | clincore.api | request_id=37079326-df0d-415d-8e41-93d0e530ce9c method=POST path=/mcare/auto status=200 ms=2451.96
+2026-02-25 11:41:34,623 | INFO | clincore.api | request_id=223afcdc-06d0-4cf9-b187-2fea5018eb41 method=GET path=/mcare status=200 ms=4.77
+2026-02-25 11:43:35,932 | INFO | clincore.api | request_id=01d5c340-4179-4730-bfa3-89a083c3ed22 method=POST path=/mcare/auto status=200 ms=3.73
+2026-02-25 11:44:16,619 | INFO | clincore.api | request_id=f6ec53b5-d2c3-468a-bdf4-488ee62e8068 method=POST path=/mcare/auto status=200 ms=2147.45
+2026-02-25 12:02:17,636 | INFO | clincore.api | request_id=6b5555a7-5c16-4021-9270-636c5f7b0bf2 method=GET path=/openapi.json status=200 ms=10.94
+2026-02-25 12:02:24,590 | INFO | clincore.api | request_id=c46f780c-42c0-491e-aae0-49e67ce53580 method=POST path=/mcare/auto status=200 ms=2273.61
+2026-02-25 12:22:48,649 | INFO | clincore.api | request_id=f9b95be5-a698-43b9-b390-fee4db3d88ff method=GET path=/mcare status=200 ms=4.99
+2026-02-25 12:22:58,422 | INFO | clincore.api | request_id=c02a141c-f442-4877-9faa-802ad5f4d697 method=POST path=/mcare/auto status=200 ms=2684.05
+2026-02-25 12:53:00,493 | INFO | clincore.api | request_id=825176e2-4418-436f-b546-bdc783323102 method=GET path=/clinical status=404 ms=0.31

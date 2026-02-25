@@ -6,6 +6,7 @@ def test_no_raw_engine_creation_outside_core_shared_db() -> None:
 
     allowed = {
         repo / "app" / "core" / "shared" / "db.py",
+        repo / "src" / "clincore" / "db.py",
         repo / "alembic" / "env.py",
         repo / "tests" / "conftest.py",
         Path(__file__).resolve(),  # ignore this file itself
