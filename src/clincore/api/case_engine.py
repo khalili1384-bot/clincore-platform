@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import time
 import uuid
 from typing import Any
@@ -14,6 +15,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from clincore.db import tenant_session
 
 router = APIRouter(prefix="/cases", tags=["cases"])
+_log = logging.getLogger("clincore.access")
+
+_SYSTEM_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+async def _log_access(
+    db: AsyncSession,
+    tenant_id: Any,
+    case_id: Any,
+    action: str,
+) -> None:
+    """Fire-and-forget single INSERT into access_logs. Never raises."""
+    try:
+        await db.execute(
+            text(
+                """
+                INSERT INTO access_logs (tenant_id, user_id, case_id, action, accessed_at)
+                VALUES (:tenant_id, :user_id, :case_id, :action, now())
+                """
+            ),
+            {
+                "tenant_id": tenant_id,
+                "user_id": _SYSTEM_USER_ID,
+                "case_id": case_id,
+                "action": action,
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        _log.warning("access_log insert failed (non-fatal): %s", exc)
 
 
 class CreateCaseRequest(BaseModel):
@@ -218,6 +248,16 @@ async def verify_replay(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_d
     verified_at_row = verified_row.mappings().first()
     verified_at = verified_at_row["replay_verified_at"] if verified_at_row else None
 
+    tenant_row = (
+        await db.execute(
+            text(
+                "SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid AS tenant_id"
+            )
+        )
+    ).mappings().first()
+    tenant_id_for_log = tenant_row["tenant_id"] if tenant_row else None
+    await _log_access(db, tenant_id_for_log, case_id, "VERIFY")
+
     return {
         "ok": ok,
         "case_id": str(case_id),
@@ -235,5 +275,7 @@ async def get_case(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_db)):
 
     if not row:
         raise HTTPException(status_code=404, detail="Case not found")
+
+    await _log_access(db, row["tenant_id"], case_id, "VIEW")
 
     return dict(row)
