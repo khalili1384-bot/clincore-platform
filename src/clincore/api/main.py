@@ -47,6 +47,13 @@ except Exception as _e:
     import logging as _lg
     _lg.getLogger("clincore.api").warning("auth_api_keys skipped: %s", _e)
 
+try:
+    from clincore.api.admin import router as _admin_router
+    app.include_router(_admin_router)
+except Exception as _e:
+    import logging as _lg
+    _lg.getLogger("clincore.api").warning("admin skipped: %s", _e)
+
 
 # -----------------------------
 # Middleware: request_id + logging

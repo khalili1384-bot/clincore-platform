@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
-from clincore.api.auth_api_keys import _hash_key, get_api_key_tenant, router as auth_router
+from clincore.api.auth_api_keys import _hash_key, router as auth_router
 from clincore.db import engine
 
 
@@ -46,29 +46,47 @@ async def _create_tenant_and_key(raw_key: str) -> str:
     return tenant_id
 
 
+def _make_probe_app() -> FastAPI:
+    """Minimal app with a protected /probe endpoint to test auth dependency."""
+    from fastapi import Depends
+    from clincore.api.auth_api_keys import get_api_key_tenant
+    app = FastAPI()
+    app.include_router(auth_router)
+
+    @app.get("/probe")
+    async def probe(tenant_id: str = Depends(get_api_key_tenant)):
+        return {"tenant_id": tenant_id}
+
+    return app
+
+
 @pytest.mark.asyncio
 async def test_valid_api_key_resolves_tenant():
     raw_key = secrets_key()
     tenant_id = await _create_tenant_and_key(raw_key)
 
-    resolved = await get_api_key_tenant(x_api_key=raw_key)
-    assert resolved == tenant_id
+    transport = ASGITransport(app=_make_probe_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        resp = await client.get("/probe", headers={"X-API-Key": raw_key})
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["tenant_id"] == tenant_id
 
 
 @pytest.mark.asyncio
 async def test_invalid_api_key_raises_401():
-    from fastapi import HTTPException
-    with pytest.raises(HTTPException) as exc_info:
-        await get_api_key_tenant(x_api_key="totally-wrong-key")
-    assert exc_info.value.status_code == 401
+    transport = ASGITransport(app=_make_probe_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        resp = await client.get("/probe", headers={"X-API-Key": "totally-wrong-key"})
+    assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_missing_api_key_raises_401():
-    from fastapi import HTTPException
-    with pytest.raises(HTTPException) as exc_info:
-        await get_api_key_tenant(x_api_key=None)
-    assert exc_info.value.status_code == 401
+    transport = ASGITransport(app=_make_probe_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        resp = await client.get("/probe")
+    assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -120,10 +138,10 @@ async def test_inactive_key_rejected():
             {"h": key_hash},
         )
 
-    from fastapi import HTTPException
-    with pytest.raises(HTTPException) as exc_info:
-        await get_api_key_tenant(x_api_key=raw_key)
-    assert exc_info.value.status_code == 401
+    transport = ASGITransport(app=_make_probe_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        resp = await client.get("/probe", headers={"X-API-Key": raw_key})
+    assert resp.status_code == 401
 
 
 def secrets_key() -> str:

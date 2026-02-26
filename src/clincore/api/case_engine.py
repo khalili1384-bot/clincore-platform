@@ -73,6 +73,27 @@ async def create_case(payload: CreateCaseRequest, db: AsyncSession = Depends(_te
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Tenant context is not set")
 
+    billing_row = (
+        await db.execute(
+            text(
+                """
+                SELECT billing_status,
+                       (SELECT COUNT(*) FROM usage_events WHERE tenant_id = :tid) AS usage_count
+                FROM cases
+                WHERE tenant_id = :tid
+                LIMIT 1
+                """
+            ),
+            {"tid": tenant_id},
+        )
+    ).mappings().first()
+
+    if billing_row and billing_row["billing_status"] == "free" and billing_row["usage_count"] > 1000:
+        raise HTTPException(
+            status_code=402,
+            detail="Free tier limit exceeded. Please upgrade to continue.",
+        )
+
     await db.execute(
         text(
             """
