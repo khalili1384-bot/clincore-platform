@@ -161,6 +161,72 @@ async def finalize_case(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_d
     return {"case_id": case_id, "status": "finalized", "signature": result_signature}
 
 
+@router.post("/{case_id}/verify-replay")
+async def verify_replay(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_db)):
+    row = (
+        await db.execute(
+            text(
+                "SELECT id, status, result_signature, ranking_snapshot FROM cases WHERE id = :case_id"
+            ),
+            {"case_id": case_id},
+        )
+    ).mappings().first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    if row["status"] != "finalized":
+        raise HTTPException(status_code=400, detail="Only finalized cases can be replay-verified")
+
+    expected = row["result_signature"]
+    ranking_snapshot = row["ranking_snapshot"]
+
+    if ranking_snapshot is None:
+        raise HTTPException(status_code=400, detail="Case has no ranking_snapshot to verify")
+
+    if isinstance(ranking_snapshot, str):
+        snapshot_obj = json.loads(ranking_snapshot)
+    else:
+        snapshot_obj = ranking_snapshot
+
+    canonical_bytes = json.dumps(
+        snapshot_obj,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    computed = hashlib.sha256(canonical_bytes).hexdigest()
+
+    ok = computed == expected
+
+    details = json.dumps({"expected": expected, "computed": computed, "match": ok})
+
+    verified_row = await db.execute(
+        text(
+            """
+            UPDATE cases
+            SET replay_verified_at = now(),
+                replay_verification_ok = :ok,
+                replay_verification_details = CAST(:details AS jsonb)
+            WHERE id = :case_id
+            RETURNING replay_verified_at
+            """
+        ),
+        {"ok": ok, "details": details, "case_id": case_id},
+    )
+
+    verified_at_row = verified_row.mappings().first()
+    verified_at = verified_at_row["replay_verified_at"] if verified_at_row else None
+
+    return {
+        "ok": ok,
+        "case_id": str(case_id),
+        "expected": expected,
+        "computed": computed,
+        "verified_at": str(verified_at) if verified_at else None,
+    }
+
+
 @router.get("/{case_id}")
 async def get_case(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_db)):
     row = (

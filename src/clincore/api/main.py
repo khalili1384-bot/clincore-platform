@@ -11,8 +11,10 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from clincore.api.logging_conf import setup_logging
+from clincore.clinical.router import router as clinical_router
 from clincore.pipeline.engine_wrapper import EngineError, run_engine
 from clincore.mcare_engine.ui.router import router as mcare_ui_router
+from clincore.api.case_engine import router as case_engine_router
 
 setup_logging()
 log = logging.getLogger("clincore.api")
@@ -23,8 +25,8 @@ ENGINE_VERSION = "mcare_sqlite_engine_v6_1"
 app = FastAPI(title="ClinCore API", version=APP_VERSION)
 
 app.include_router(mcare_ui_router)
-
-
+app.include_router(clinical_router)
+app.include_router(case_engine_router)
 
 
 # -----------------------------
