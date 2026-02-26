@@ -26,6 +26,21 @@ app = FastAPI(title="ClinCore API", version=APP_VERSION)
 app.include_router(mcare_ui_router)
 app.include_router(clinical_router)
 
+# ── Startup safeguard: log Python version + router path ──
+@app.on_event("startup")
+async def _startup_safeguard():
+    import sys as _sys
+    from clincore.mcare_engine.ui import router as _mcare_mod
+    log.info("=== STARTUP SAFEGUARD ===")
+    log.info("Python: %s", _sys.version)
+    log.info("MCARE router module: %s", _mcare_mod.__file__)
+    log.info("sys.path[0]: %s", _sys.path[0] if _sys.path else "EMPTY")
+    _routes = [r.path for r in mcare_ui_router.routes]
+    log.info("MCARE routes: %s", _routes)
+    assert "/mcare/auto" in _routes, f"/mcare/auto MISSING from mcare_ui_router! Got: {_routes}"
+    log.info("=== /mcare/auto CONFIRMED ===")
+
+
 try:
     from clincore.api.case_engine import router as _ce_router
     app.include_router(_ce_router)

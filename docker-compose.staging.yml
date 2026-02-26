@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  postgres_staging:
+    image: postgres:15
+    container_name: clincore_staging_db
+    environment:
+      POSTGRES_DB: clincore_staging
+      POSTGRES_USER: clincore
+      POSTGRES_PASSWORD: clincore
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clincore -d clincore_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

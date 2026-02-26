@@ -57,6 +57,19 @@ SessionLocal = async_sessionmaker(
 # Generic Session (NO tenant context)
 # ─────────────────────────────────────────
 
+def make_engine(url: str) -> "AsyncEngine":
+    """
+    Build a new AsyncEngine for the given URL.
+    Use this instead of calling create_async_engine directly outside this module.
+    """
+    return create_async_engine(url, echo=False, pool_pre_ping=True)
+
+
+def make_session_factory(eng: "AsyncEngine") -> async_sessionmaker:
+    """Build a new async_sessionmaker bound to the given engine."""
+    return async_sessionmaker(bind=eng, expire_on_commit=False, autoflush=False)
+
+
 @asynccontextmanager
 async def session_scope() -> AsyncIterator[AsyncSession]:
     """
