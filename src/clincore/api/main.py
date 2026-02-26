@@ -33,6 +33,20 @@ except Exception as _e:
     import logging as _lg
     _lg.getLogger("clincore.api").warning("case_engine skipped: %s", _e)
 
+try:
+    from clincore.api.bootstrap import router as _bootstrap_router
+    app.include_router(_bootstrap_router)
+except Exception as _e:
+    import logging as _lg
+    _lg.getLogger("clincore.api").warning("bootstrap skipped: %s", _e)
+
+try:
+    from clincore.api.auth_api_keys import router as _auth_router
+    app.include_router(_auth_router)
+except Exception as _e:
+    import logging as _lg
+    _lg.getLogger("clincore.api").warning("auth_api_keys skipped: %s", _e)
+
 
 # -----------------------------
 # Middleware: request_id + logging
