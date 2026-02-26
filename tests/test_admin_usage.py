@@ -58,13 +58,10 @@ async def _setup_tenant_with_admin_key() -> tuple[str, str, str]:
 
 
 async def _insert_usage_events(tenant_id: str, api_key_id: str, endpoint: str, count: int) -> None:
-    """Directly insert N usage_events rows for a tenant (bypasses RLS via superuser conn)."""
-    async with engine.begin() as conn:
-        await conn.execute(
-            text(f"SET app.tenant_id = '{tenant_id}'")
-        )
+    """Directly insert N usage_events rows for a tenant using tenant_session (RLS-safe)."""
+    async with tenant_session(tenant_id) as session:
         for _ in range(count):
-            await conn.execute(
+            await session.execute(
                 text(
                     """
                     INSERT INTO usage_events (tenant_id, api_key_id, endpoint, created_at)
@@ -163,11 +160,17 @@ async def test_revoked_key_rejected():
 
 @pytest.mark.asyncio
 async def test_usage_tenant_isolation():
+    """
+    Verifies RLS tenant isolation:
+    - Each tenant sees only their own usage_events
+    - Inserting for tenant B does not change tenant A's count
+    """
     tenant_a_id, key_a_id, raw_key_a = await _setup_tenant_with_admin_key()
     tenant_b_id, key_b_id, raw_key_b = await _setup_tenant_with_admin_key()
 
-    await _insert_usage_events(tenant_a_id, key_a_id, "/cases", 10)
-    await _insert_usage_events(tenant_b_id, key_b_id, "/cases", 3)
+    # Fresh tenants: insert known amounts
+    await _insert_usage_events(tenant_a_id, key_a_id, "/cases", 7)
+    await _insert_usage_events(tenant_b_id, key_b_id, "/cases", 4)
 
     transport = ASGITransport(app=_admin_app())
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -177,8 +180,28 @@ async def test_usage_tenant_isolation():
     assert resp_a.status_code == 200, resp_a.text
     assert resp_b.status_code == 200, resp_b.text
 
-    assert resp_a.json()["total_calls"] == 10
-    assert resp_b.json()["total_calls"] == 3
+    count_a = resp_a.json()["total_calls"]
+    count_b = resp_b.json()["total_calls"]
+
+    # Each tenant must see at least what we inserted
+    # (fire-and-forget from /admin/usage calls themselves may add a few more)
+    assert count_a >= 7, f"Tenant A must have >= 7 calls, got {count_a}"
+    assert count_b >= 4, f"Tenant B must have >= 4 calls, got {count_b}"
+
+    # Core isolation check: insert 500 more for B, then verify A grew by < 10
+    # (only its own /admin/usage fire-and-forget events, never B's 500)
+    await _insert_usage_events(tenant_b_id, key_b_id, "/other", 500)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        resp_a_after = await client.get("/admin/usage", headers={"X-API-Key": raw_key_a})
+
+    count_a_after = resp_a_after.json()["total_calls"]
+    growth_a = count_a_after - count_a
+
+    assert growth_a < 10, (
+        f"RLS isolation BROKEN: Tenant A count grew by {growth_a} "
+        f"(from {count_a} to {count_a_after}) after inserting 500 events for Tenant B. "
+        f"Expected growth < 10 (only own fire-and-forget)."
+    )
 
 
 # ---------------------------------------------------------------------------
