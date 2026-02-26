@@ -14,7 +14,6 @@ from clincore.api.logging_conf import setup_logging
 from clincore.clinical.router import router as clinical_router
 from clincore.pipeline.engine_wrapper import EngineError, run_engine
 from clincore.mcare_engine.ui.router import router as mcare_ui_router
-from clincore.api.case_engine import router as case_engine_router
 
 setup_logging()
 log = logging.getLogger("clincore.api")
@@ -26,7 +25,13 @@ app = FastAPI(title="ClinCore API", version=APP_VERSION)
 
 app.include_router(mcare_ui_router)
 app.include_router(clinical_router)
-app.include_router(case_engine_router)
+
+try:
+    from clincore.api.case_engine import router as _ce_router
+    app.include_router(_ce_router)
+except Exception as _e:
+    import logging as _lg
+    _lg.getLogger("clincore.api").warning("case_engine skipped: %s", _e)
 
 
 # -----------------------------
