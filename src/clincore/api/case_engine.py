@@ -76,29 +76,7 @@ async def finalize_case(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_d
     if row["status"] != "draft":
         raise HTTPException(status_code=400, detail="Only draft cases can be finalized")
 
-    ranking = [{"rank": 1, "remedy": "TestRemedy", "score": 1.0}]
-    result_signature = hashlib.sha256(
-        json.dumps(ranking, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
-
-    await db.execute(
-        text(
-            """
-            UPDATE cases
-            SET status = 'finalized',
-                finalized_at = now(),
-                ranking_snapshot = CAST(:ranking_snapshot AS jsonb),
-                result_signature = :result_signature
-            WHERE id = :case_id
-            """
-        ),
-        {
-            "ranking_snapshot": json.dumps(ranking),
-            "result_signature": result_signature,
-            "case_id": case_id,
-        },
-    )
-
+    # Deterministic placeholder ranking for v0.3.x until engine ranking is wired.
     await db.execute(
         text(
             """
@@ -114,6 +92,54 @@ async def finalize_case(case_id: uuid.UUID, db: AsyncSession = Depends(_tenant_d
             "raw_score": 1.0,
         },
     )
+
+    ranking_rows = (
+        await db.execute(
+            text(
+                """
+                SELECT rank, remedy_name, raw_score
+                FROM case_results
+                WHERE case_id = :case_id
+                ORDER BY rank ASC, remedy_name ASC
+                """
+            ),
+            {"case_id": case_id},
+        )
+    ).mappings().all()
+
+    ranking_snapshot = [
+        {"rank": int(r["rank"]), "remedy": r["remedy_name"], "score": float(r["raw_score"])}
+        for r in ranking_rows
+    ]
+
+    canonical_payload = json.dumps(
+        ranking_snapshot,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    result_signature = hashlib.sha256(canonical_payload).hexdigest()
+
+    updated = await db.execute(
+        text(
+            """
+            UPDATE cases
+            SET status = 'finalized',
+                finalized_at = now(),
+                ranking_snapshot = CAST(:ranking_snapshot AS jsonb),
+                result_signature = :result_signature
+            WHERE id = :case_id
+              AND status = 'draft'
+            """
+        ),
+        {
+            "ranking_snapshot": json.dumps(ranking_snapshot),
+            "result_signature": result_signature,
+            "case_id": case_id,
+        },
+    )
+
+    if updated.rowcount != 1:
+        raise HTTPException(status_code=400, detail="Only draft cases can be finalized")
 
     await db.execute(
         text(
