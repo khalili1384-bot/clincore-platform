@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.3.8a-release-hygiene
+
+- Fix flaky admin usage isolation test (remove pooled-connection tenant leakage by using `tenant_session` / `SET LOCAL`)
+- No schema change
+- No business logic change
+- pytest: 40 passed
+- Alembic head unchanged: `b1c2d3e4f505`
+
+## v0.3.8-release-hygiene
+
+- CHANGELOG.md (tag-aligned, all versions)
+- `docs/ops.md` operational runbook
+- `scripts/smoke.ps1` automated sanity check with RELEASE STATUS block
+- `scripts/smoke.py` ASGI-level HTTP smoke test (5 checks, no network)
+- 40 tests passing
+- Alembic head: `b1c2d3e4f505`
+
 ## v0.3.7-admin-surface
 
 - Usage tracking (`usage_events` table + RLS tenant isolation)
