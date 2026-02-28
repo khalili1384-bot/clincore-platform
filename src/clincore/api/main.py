@@ -75,6 +75,12 @@ try:
 except Exception as _e:
     log.warning("admin skipped: %s", _e)
 
+try:
+    from clincore.api.feedback_router import router as _feedback_router
+    app.include_router(_feedback_router)
+except Exception as _e:
+    log.warning("feedback_router skipped: %s", _e)
+
 
 # ── Legacy /health (backwards compat) ────────────────────────────────────────
 @app.get("/health")
