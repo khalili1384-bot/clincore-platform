@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
-import re
 import sqlite3
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from clincore.mcare_engine.mcare_sqlite_engine_v6_1 import score_case, load_params
-from clincore.mcare_engine.case_logger import log_case
+from clincore.mcare_engine.case_logger import log_case, LOG_PATH
 from clincore.mcare_engine.clinical_extractor import build_clinical_case
 
 DB_PATH = r"src/clincore/mcare_engine/data/synthesis.db"
@@ -41,62 +42,6 @@ def extract_rubrics(narrative: str, max_n: int = 10) -> list[str]:
     return clinical["rubrics"][:max_n]
 
 
-# ── DB rubric → symptom_id mapper (deterministic, syntree + cross_references) ──
-
-def _lookup_rubric_in_db(cur: sqlite3.Cursor, rubric: str) -> tuple:
-    """Deterministic rubric→symptom_id using syntree + cross_references."""
-    q = rubric.strip().upper()
-    # 1) syntree exact
-    cur.execute("SELECT id, search_path FROM syntree WHERE upper(search_path)=? LIMIT 1", (q,))
-    row = cur.fetchone()
-    if row:
-        return int(row[0]), row[1], "syntree_exact"
-    # 2) syntree LIKE shortest match
-    cur.execute(
-        "SELECT id, search_path FROM syntree WHERE upper(search_path) LIKE ? ORDER BY LENGTH(search_path) ASC LIMIT 1",
-        (f"%{q}%",),
-    )
-    row = cur.fetchone()
-    if row:
-        return int(row[0]), row[1], "syntree_like"
-    # 3) syntree token search (split on " - ")
-    for token in [t.strip() for t in q.split(" - ") if len(t.strip()) >= 4]:
-        cur.execute(
-            "SELECT id, search_path FROM syntree WHERE upper(search_path) LIKE ? ORDER BY LENGTH(search_path) ASC LIMIT 1",
-            (f"%{token}%",),
-        )
-        row = cur.fetchone()
-        if row:
-            return int(row[0]), row[1], f"syntree_token:{token}"
-    # 4) cross_references exact
-    cur.execute("SELECT symptom_id, text FROM cross_references WHERE upper(text)=? LIMIT 1", (q,))
-    row = cur.fetchone()
-    if row:
-        return int(row[0]), row[1], "xref_exact"
-    # 5) cross_references LIKE shortest
-    cur.execute(
-        "SELECT symptom_id, text FROM cross_references WHERE upper(text) LIKE ? ORDER BY LENGTH(text) ASC LIMIT 1",
-        (f"%{q}%",),
-    )
-    row = cur.fetchone()
-    if row:
-        return int(row[0]), row[1], "xref_like"
-    return None, None, "not_found"
-
-
-def map_rubrics_to_ids(rubrics: list[str]) -> dict[str, Any]:
-    mapped = []
-    con = sqlite3.connect(DB_PATH)
-    try:
-        cur = con.cursor()
-        for r in rubrics:
-            sid, matched, method = _lookup_rubric_in_db(cur, r)
-            mapped.append({"rubric": r, "symptom_id": sid, "matched_text": matched, "method": method})
-        return {"mapped": mapped, "db_path": DB_PATH, "table": "syntree", "text_col": "search_path"}
-    finally:
-        con.close()
-
-
 # ── Endpoints ──
 
 @router.get("/mcare", response_class=HTMLResponse)
@@ -110,13 +55,6 @@ def mcare_extract(payload: dict[str, Any]):
     narrative = str(payload.get("narrative", "") or "")
     clinical = build_clinical_case(narrative, db_path=DB_PATH)
     return {"rubrics": clinical["rubrics"], "method": "clinical_extractor_v2", "mind_count": clinical["mind_count"]}
-
-
-@router.post("/mcare/map")
-def mcare_map(payload: dict[str, Any]):
-    rubrics = payload.get("rubrics") or []
-    rubrics = [str(x) for x in rubrics if str(x).strip()]
-    return map_rubrics_to_ids(rubrics)
 
 
 @router.post("/mcare/score")
@@ -248,3 +186,132 @@ def mcare_save(payload: dict[str, Any]):
         dataset_path=DB_PATH,
     )
     return {"ok": True, "case_id": case_id, "saved_to": "data/case_logs.jsonl"}
+
+
+# ── Feedback Table Schema ──
+_FEEDBACK_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS clinical_feedback (
+    id TEXT PRIMARY KEY,
+    case_hash TEXT NOT NULL,
+    suggested_top1 TEXT,
+    chosen_remedy TEXT NOT NULL,
+    chosen_rank INTEGER,
+    confidence INTEGER,
+    tenant_id TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+"""
+_FEEDBACK_INDEX_SQL = """
+CREATE INDEX IF NOT EXISTS idx_clinical_feedback_tenant_time
+ON clinical_feedback(tenant_id, created_at)
+"""
+
+
+def _ensure_feedback_table(db_path: str) -> None:
+    """Ensure clinical_feedback table exists in SQLite."""
+    con = sqlite3.connect(db_path)
+    try:
+        cur = con.cursor()
+        cur.execute(_FEEDBACK_TABLE_SQL)
+        cur.execute(_FEEDBACK_INDEX_SQL)
+        con.commit()
+    finally:
+        con.close()
+
+
+def _find_case_info(case_hash: str) -> dict[str, Any] | None:
+    """Find case info from case_logs.jsonl by case_hash (which is case_id in logs)."""
+    if not LOG_PATH.exists():
+        return None
+    try:
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                    if entry.get("case_id") == case_hash:
+                        ranking = entry.get("ranking_snapshot", [])
+                        suggested_top1 = ranking[0]["remedy"] if ranking else None
+                        return {
+                            "suggested_top1": suggested_top1,
+                            "ranking": ranking,
+                        }
+                except json.JSONDecodeError:
+                    continue
+    except Exception:
+        pass
+    return None
+
+
+@router.post("/mcare/feedback")
+def mcare_feedback(payload: dict[str, Any]):
+    """Record physician feedback on remedy selection.
+
+    Body:
+        case_hash: str - The case_id from /mcare/save response
+        chosen_remedy: str - The remedy selected by physician
+        confidence: int (1-5) - Physician confidence level
+        tenant_id: str (optional) - Defaults to 'default'
+
+    Returns:
+        {ok: true} on success
+    """
+    try:
+        case_hash = str(payload.get("case_hash", "")).strip()
+        chosen_remedy = str(payload.get("chosen_remedy", "")).strip()
+        confidence = payload.get("confidence")
+        tenant_id = str(payload.get("tenant_id", "default")).strip()
+
+        if not case_hash:
+            return {"ok": False, "error": "case_hash is required"}
+        if not chosen_remedy:
+            return {"ok": False, "error": "chosen_remedy is required"}
+
+        # Validate confidence is 1-5 if provided
+        if confidence is not None:
+            try:
+                confidence = int(confidence)
+                if confidence < 1 or confidence > 5:
+                    return {"ok": False, "error": "confidence must be between 1 and 5"}
+            except (ValueError, TypeError):
+                return {"ok": False, "error": "confidence must be an integer 1-5"}
+
+        # Ensure feedback table exists
+        _ensure_feedback_table(DB_PATH)
+
+        # Lookup case info from logs to find suggested_top1 and compute chosen_rank
+        case_info = _find_case_info(case_hash)
+        suggested_top1 = None
+        chosen_rank = None
+
+        if case_info:
+            suggested_top1 = case_info.get("suggested_top1")
+            ranking = case_info.get("ranking", [])
+            # Find rank of chosen_remedy
+            for i, r in enumerate(ranking):
+                if r.get("remedy") == chosen_remedy:
+                    chosen_rank = i + 1  # 1-based rank
+                    break
+
+        # Insert feedback record
+        con = sqlite3.connect(DB_PATH)
+        try:
+            cur = con.cursor()
+            feedback_id = str(uuid.uuid4())
+            cur.execute(
+                """INSERT INTO clinical_feedback
+                    (id, case_hash, suggested_top1, chosen_remedy, chosen_rank, confidence, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (feedback_id, case_hash, suggested_top1, chosen_remedy, chosen_rank, confidence, tenant_id)
+            )
+            con.commit()
+            _log.info("Feedback recorded: case_hash=%s, chosen=%s, rank=%s", case_hash, chosen_remedy, chosen_rank)
+        finally:
+            con.close()
+
+        return {"ok": True, "feedback_id": feedback_id}
+    except Exception as exc:
+        _log.error("Feedback recording failed: %s", exc)
+        return {"ok": False, "error": str(exc)}
