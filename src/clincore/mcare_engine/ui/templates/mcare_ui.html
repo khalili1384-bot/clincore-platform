@@ -1,277 +1,189 @@
 ﻿<!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ClinCore — MCARE</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-    .num { font-variant-numeric: tabular-nums; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ClinCore — MCARE Narrative Analyzer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f0f2f5;--card:#fff;--border:#d1d5db;--accent:#1e293b;--accent2:#334155;
+      --green:#16a34a;--red:#dc2626;--muted:#64748b;--radius:14px}
+body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:#1e293b;
+     min-height:100vh;direction:rtl}
+.container{max-width:900px;margin:0 auto;padding:24px 16px}
+header{text-align:center;margin-bottom:28px}
+header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.5px}
+header p{color:var(--muted);font-size:.85rem;margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px;color:var(--accent2)}
+textarea#narrative{width:100%;min-height:160px;border:1px solid var(--border);border-radius:10px;
+        padding:12px;font-size:.95rem;line-height:1.7;resize:vertical;direction:rtl;
+        font-family:inherit;outline:none;transition:border .2s}
+textarea#narrative:focus{border-color:var(--accent)}
+.btn-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+button{border:none;border-radius:10px;padding:10px 22px;font-size:.9rem;font-weight:600;
+       cursor:pointer;transition:background .15s,transform .1s}
+button:active{transform:scale(.97)}
+#btnAnalyze{background:var(--accent);color:#fff}
+#btnAnalyze:hover{background:var(--accent2)}
+#btnClear{background:#e2e8f0;color:var(--accent)}
+#btnClear:hover{background:#cbd5e1}
+.sample-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sample-btn{background:#f1f5f9;border:1px solid var(--border);border-radius:8px;
+            padding:6px 14px;font-size:.78rem;color:var(--accent2);cursor:pointer}
+.sample-btn:hover{background:#e2e8f0}
+#status{margin-top:12px;font-size:.85rem;min-height:1.2em}
+.ok{color:var(--green)}.err{color:var(--red)}
+.rubrics-box{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500}
+.chip-mind{background:#ede9fe;color:#5b21b6}
+.chip-gen{background:#ecfdf5;color:#065f46}
+.chip-part{background:#fef3c7;color:#92400e}
+.chip-sleep{background:#e0f2fe;color:#075985}
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:10px}
+th{text-align:right;padding:8px 6px;border-bottom:2px solid var(--border);color:var(--muted);font-size:.8rem}
+td{padding:8px 6px;border-bottom:1px solid #f1f5f9}
+tr:hover td{background:#f8fafc}
+.num{font-variant-numeric:tabular-nums;direction:ltr;text-align:left}
+.debug-box{background:#f8fafc;border:1px solid var(--border);border-radius:10px;
+           padding:14px;margin-top:14px;font-size:.82rem;color:var(--muted)}
+.debug-box b{color:var(--accent)}
+pre#rawJson{background:#1e293b;color:#e2e8f0;border-radius:10px;padding:14px;
+            overflow:auto;max-height:300px;font-size:.78rem;line-height:1.5;margin-top:14px;
+            direction:ltr;text-align:left}
+</style>
 </head>
+<body>
+<div class="container">
+  <header>
+    <h1>ClinCore — MCARE Narrative Analyzer</h1>
+    <p>تحلیل بالینی روایت بیمار &bull; استخراج روبریک &bull; امتیازدهی رمدی</p>
+  </header>
 
-<body class="bg-slate-50 text-slate-900">
-  <div class="min-h-screen">
-    <!-- Top bar -->
-    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-slate-900 text-white grid place-items-center font-bold">CC</div>
-          <div>
-            <div class="font-semibold">ClinCore — MCARE</div>
-            <div class="text-xs text-slate-500">Scoring + ذخیرهسازی کیسهای بالینی</div>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 text-xs text-slate-500">
-          <span class="px-2 py-1 rounded-full bg-slate-100 border border-slate-200">Local</span>
-          <span id="apiBase" class="num"></span>
-        </div>
-      </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Left: form -->
-      <section class="lg:col-span-5">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-200">
-            <h2 class="font-semibold">ورود روبریکها</h2>
-            <p class="text-sm text-slate-500 mt-1">symptom_id ها را وارد کن. وزن اختیاری است (پیشفرض 1).</p>
-          </div>
-
-          <div class="p-5 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="text-sm text-slate-600">Tenant ID</label>
-                <input id="tenantId" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20"
-                       placeholder="مثال: 11111111-1111-1111-1111-111111111111" />
-                <p class="text-xs text-slate-500 mt-1">برای RLS/ایزولهسازی اجباری است.</p>
-              </div>
-
-              <div>
-                <label class="text-sm text-slate-600">Top N</label>
-                <input id="topN" type="number" min="1" max="100" value="10"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20" />
-                <p class="text-xs text-slate-500 mt-1">پیشنهاد: 10 تا 20</p>
-              </div>
-            </div>
-
-            <div>
-              <label class="text-sm text-slate-600">Course</label>
-              <select id="course" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20">
-                <option value="acute">acute</option>
-                <option value="chronic">chronic</option>
-              </select>
-              <p class="text-xs text-slate-500 mt-1">الان engine شما course را lower() میکند پس خالی نباشد.</p>
-            </div>
-
-            <div>
-              <label class="text-sm text-slate-600">Case Type</label>
-              <select id="caseType" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-900/20">
-                <option value="auto">auto</option>
-                <option value="mind_dominant">mind_dominant</option>
-                <option value="constitution">constitution</option>
-                <option value="mixed">mixed</option>
-              </select>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between">
-                <label class="text-sm text-slate-600">Rubrics (JSON)</label>
-                <button id="btnSample" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200">
-                  نمونه بگذار
-                </button>
-              </div>
-              <textarea id="rubricsJson" rows="9"
-                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-slate-900/20"
-                        placeholder='مثال:
-[
-  {"symptom_id": 13401754, "weight": 1},
-  {"symptom_id": 13401755, "weight": 1}
-]'></textarea>
-              <p class="text-xs text-slate-500 mt-1">کلیدها دقیقا همینها باشند: symptom_id, weight</p>
-            </div>
-
-            <div class="flex gap-3">
-              <button id="btnRun" class="flex-1 rounded-2xl bg-slate-900 text-white px-4 py-2.5 font-semibold hover:bg-slate-800">
-                اجرا / Score
-              </button>
-              <button id="btnClear" class="rounded-2xl bg-white border border-slate-300 px-4 py-2.5 hover:bg-slate-50">
-                پاککردن
-              </button>
-            </div>
-
-            <div id="status" class="text-sm text-slate-600"></div>
-          </div>
-        </div>
-
-        <div class="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-          <h3 class="font-semibold">نکتههای سریع</h3>
-          <ul class="mt-2 text-sm text-slate-600 space-y-1 list-disc pr-5">
-            <li>اگر خطای <span class="font-mono">symptom_id</span> یا <span class="font-mono">weight</span> دیدی یعنی JSON درست نیست.</li>
-            <li>اگر دیتابیس SQLite اشتباه باشد engine ستون/جدولها را پیدا نمیکند.</li>
-            <li>اگر Postgres جدول ندارد فعلا فقط engine را تست کن persistence را بعد از migrate فعال میکنیم.</li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- Right: results -->
-      <section class="lg:col-span-7">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h2 class="font-semibold">نتایج</h2>
-              <p class="text-sm text-slate-500 mt-1">لیست رمدیها + meta</p>
-            </div>
-            <div class="text-xs text-slate-500">
-              <span class="px-2 py-1 rounded-full bg-slate-100 border border-slate-200">JSON</span>
-            </div>
-          </div>
-
-          <div class="p-5">
-            <pre id="outJson" class="bg-slate-900 text-slate-100 rounded-2xl p-4 overflow-auto text-xs leading-relaxed"></pre>
-          </div>
-        </div>
-
-        <div class="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-200">
-            <h3 class="font-semibold">جدول خلاصه</h3>
-            <p class="text-sm text-slate-500 mt-1">Top N به صورت جدول</p>
-          </div>
-          <div class="p-5 overflow-auto">
-            <table class="min-w-full text-sm">
-              <thead class="text-slate-600">
-                <tr class="border-b">
-                  <th class="text-right py-2">#</th>
-                  <th class="text-right py-2">Remedy</th>
-                  <th class="text-right py-2">mcare_score</th>
-                  <th class="text-right py-2">raw_score</th>
-                  <th class="text-right py-2">freq</th>
-                </tr>
-              </thead>
-              <tbody id="tblBody" class="text-slate-800"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="max-w-6xl mx-auto px-4 py-8 text-xs text-slate-500">
-      ClinCore — Local MCARE UI · برای استفاده داخلی کلینیک
-    </footer>
+  <div class="card">
+    <label for="narrative">روایت بالینی بیمار (فارسی یا انگلیسی)</label>
+    <textarea id="narrative" placeholder="متن شرح حال بیمار را اینجا وارد کنید...&#10;&#10;مثال: بیمار با ترس مالی، وسواس نظم و تمیزی، کنترل شدید، بی‌خوابی در نیمه‌شب، سرمایی، بی‌قراری شبانه"></textarea>
+    <div class="sample-row">
+      <button class="sample-btn" onclick="setSample('en')">English Sample</button>
+      <button class="sample-btn" onclick="setSample('fa')">نمونه فارسی</button>
+    </div>
+    <div class="btn-row">
+      <button id="btnAnalyze">تحلیل / Analyze</button>
+      <button id="btnClear">پاک‌کردن</button>
+    </div>
+    <div id="status"></div>
   </div>
 
+  <div class="card" id="rubricCard" style="display:none">
+    <label>روبریک‌های استخراج‌شده</label>
+    <div class="rubrics-box" id="rubricChips"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <label>نتایج رمدی (Top N)</label>
+    <table>
+      <thead><tr><th>#</th><th>Remedy</th><th>Score</th></tr></thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" id="debugCard" style="display:none">
+    <label>Debug Info</label>
+    <div class="debug-box" id="debugBox"></div>
+    <pre id="rawJson"></pre>
+  </div>
+</div>
+
 <script>
-  const apiBase = location.origin;
-  document.getElementById("apiBase").textContent = apiBase;
+const $ = id => document.getElementById(id);
 
-  const $ = (id) => document.getElementById(id);
+const SAMPLES = {
+  en: "Patient presents with grief and bereavement after loss of mother. Anxiety about health and finances. Fear of poverty. Controlling personality, fastidious about order and cleanliness. Insomnia worse at midnight. Chilly patient. Desire for sour food. Restlessness at night.",
+  fa: "\u0628\u06cc\u0645\u0627\u0631 \u0628\u0627 \u062a\u0631\u0633 \u0645\u0627\u0644\u06cc \u0648 \u0646\u06af\u0631\u0627\u0646\u06cc \u0627\u0632 \u0648\u0631\u0634\u06a9\u0633\u062a\u06af\u06cc\u060c \u0648\u0633\u0648\u0627\u0633 \u0646\u0638\u0645 \u0648 \u062a\u0645\u06cc\u0632\u06cc\u060c \u06a9\u0646\u062a\u0631\u0644 \u0634\u062f\u06cc\u062f\u060c \u0628\u06cc\u200c\u062e\u0648\u0627\u0628\u06cc \u062f\u0631 \u0646\u06cc\u0645\u0647\u200c\u0634\u0628\u060c \u0633\u0631\u0645\u0627\u06cc\u06cc\u060c \u0628\u06cc\u200c\u0642\u0631\u0627\u0631\u06cc \u0634\u0628\u0627\u0646\u0647"
+};
 
-  function setStatus(msg, isError=false) {
-    $("status").textContent = msg;
-    $("status").className = "text-sm " + (isError ? "text-red-600" : "text-slate-600");
-  }
+function setSample(lang) { $("narrative").value = SAMPLES[lang]; }
 
-  function safeJsonParse(txt) {
-    try { return [JSON.parse(txt), null]; }
-    catch (e) { return [null, e]; }
-  }
+function chipClass(rubric) {
+  const u = rubric.toUpperCase();
+  if (u.startsWith("MIND")) return "chip chip-mind";
+  if (u.startsWith("SLEEP")) return "chip chip-sleep";
+  if (u.startsWith("GENERALS") || u.startsWith("PERSPIRATION")) return "chip chip-gen";
+  return "chip chip-part";
+}
 
-  $("btnSample").addEventListener("click", () => {
-    $("rubricsJson").value = JSON.stringify([
-      { symptom_id: 13401754, weight: 1 },
-      { symptom_id: 13401755, weight: 1 },
-      { symptom_id: 13401756, weight: 1 }
-    ], null, 2);
-    setStatus("نمونه قرار داده شد.");
-  });
+function setStatus(msg, cls) { $("status").textContent = msg; $("status").className = cls || ""; }
 
-  $("btnClear").addEventListener("click", () => {
-    $("rubricsJson").value = "";
-    $("outJson").textContent = "";
-    $("tblBody").innerHTML = "";
-    setStatus("پاک شد.");
-  });
+$("btnClear").addEventListener("click", () => {
+  $("narrative").value = "";
+  $("rubricCard").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("debugCard").style.display = "none";
+  setStatus("");
+});
 
-  function renderTable(results) {
-    const tbody = $("tblBody");
-    tbody.innerHTML = "";
-    results.forEach((r, idx) => {
+$("btnAnalyze").addEventListener("click", async () => {
+  const narrative = $("narrative").value.trim();
+  if (!narrative) { setStatus("\u0644\u0637\u0641\u0627\u064b \u0631\u0648\u0627\u06cc\u062a \u0628\u06cc\u0645\u0627\u0631 \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f.", "err"); return; }
+
+  setStatus("\u062f\u0631 \u062d\u0627\u0644 \u062a\u062d\u0644\u06cc\u0644...", "");
+  $("rubricCard").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("debugCard").style.display = "none";
+
+  try {
+    const res = await fetch("/mcare/auto", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ narrative, top_n: 10 })
+    });
+    const data = await res.json();
+    $("rawJson").textContent = JSON.stringify(data, null, 2);
+    $("debugCard").style.display = "block";
+
+    if (!data.ok) {
+      setStatus("\u062e\u0637\u0627: " + (data.error?.message || "Unknown"), "err");
+      if (data.rubrics && data.rubrics.length) {
+        renderChips(data.rubrics);
+        $("rubricCard").style.display = "block";
+      }
+      return;
+    }
+
+    renderChips(data.rubrics);
+    $("rubricCard").style.display = "block";
+
+    const tbody = $("tblBody"); tbody.innerHTML = "";
+    (data.results || []).forEach((r, i) => {
       const tr = document.createElement("tr");
-      tr.className = "border-b last:border-b-0";
-      tr.innerHTML = `
-        <td class="py-2 num">${idx+1}</td>
-        <td class="py-2 font-medium">${r.remedy ?? ""}</td>
-        <td class="py-2 num">${r.mcare_score ?? ""}</td>
-        <td class="py-2 num">${r.raw_score ?? ""}</td>
-        <td class="py-2 num">${r.freq ?? ""}</td>
-      `;
+      tr.innerHTML = "<td>" + (i+1) + "</td><td><b>" + r.remedy + "</b></td><td class='num'>" + r.score.toFixed(4) + "</td>";
       tbody.appendChild(tr);
     });
+    $("resultCard").style.display = "block";
+
+    const dbg = data.debug || {};
+    $("debugBox").innerHTML =
+      "<b>Matched:</b> " + (dbg.matched_count ?? "?") +
+      " &bull; <b>Unmapped:</b> " + (dbg.unmapped_rubrics?.join(", ") || "none") +
+      " &bull; <b>Mind rubrics:</b> " + (dbg.mind_count ?? "?") +
+      " &bull; <b>Clusters:</b> " + (dbg.clusters_active?.join(", ") || "none");
+
+    setStatus("\u062a\u062d\u0644\u06cc\u0644 \u06a9\u0627\u0645\u0644 \u0634\u062f. " + data.results.length + " \u0631\u0645\u062f\u06cc \u06cc\u0627\u0641\u062a \u0634\u062f.", "ok");
+  } catch(e) {
+    setStatus("\u062e\u0637\u0627\u06cc \u0634\u0628\u06a9\u0647: " + e.message, "err");
   }
+});
 
-  $("btnRun").addEventListener("click", async () => {
-    const tenantId = $("tenantId").value.trim();
-    const topN = Number($("topN").value || 10);
-    const caseType = $("caseType").value;
-    const course = $("course").value;
-
-    if (!tenantId) {
-      setStatus("Tenant ID را وارد کن.", true);
-      return;
-    }
-
-    const [rubrics, err] = safeJsonParse($("rubricsJson").value.trim() || "[]");
-    if (err) {
-      setStatus("JSON نامعتبر است: " + err.message, true);
-      return;
-    }
-    if (!Array.isArray(rubrics) || rubrics.length < 1) {
-      setStatus("حداقل 1 rubric لازم است.", true);
-      return;
-    }
-
-    // Backward-compatible payload (این را با endpoint واقعیتان هماهنگ میکنیم)
-    const payload = {
-      case_df: rubrics,
-      top_n: topN,
-      case_type: caseType,
-      course: course
-    };
-
-    setStatus("در حال ارسال درخواست...");
-    $("outJson").textContent = "";
-
-    try {
-      const res = await fetch("/mcare/score", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Tenant-ID": tenantId
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-      $("outJson").textContent = JSON.stringify(data, null, 2);
-
-      if (!res.ok) {
-        setStatus("خطا: " + (data?.detail?.message || data?.detail || res.status), true);
-        $("tblBody").innerHTML = "";
-        return;
-      }
-
-      const results = data.results || [];
-      renderTable(results);
-      setStatus("انجام شد. تعداد نتایج: " + results.length);
-
-    } catch (e) {
-      setStatus("خطای شبکه/سرور: " + e.message, true);
-    }
+function renderChips(rubrics) {
+  const box = $("rubricChips"); box.innerHTML = "";
+  rubrics.forEach(r => {
+    const span = document.createElement("span");
+    span.className = chipClass(r);
+    span.textContent = r;
+    box.appendChild(span);
   });
+}
 </script>
 </body>
 </html>

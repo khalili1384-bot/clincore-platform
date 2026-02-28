@@ -915,12 +915,29 @@ def build_clinical_case(
     # Phase 4: differentiation enhancement
     rubric_entries = apply_differentiation(concepts, rubric_entries)
 
-    # Track active clusters
+    # Track active clusters with detailed flags
     concept_keys = set(concepts.keys())
     clusters_active = []
+    cluster_flags = []
     for cluster_name, indicators, min_match, *_ in DIFFERENTIATION_CLUSTERS:
-        if len(indicators & concept_keys) >= min_match:
+        matched = indicators & concept_keys
+        if len(matched) >= min_match:
             clusters_active.append(cluster_name)
+            cluster_flags.append({
+                "cluster": cluster_name,
+                "fired": True,
+                "matched_indicators": list(matched),
+                "min_match": min_match,
+                "matched_count": len(matched),
+            })
+        else:
+            cluster_flags.append({
+                "cluster": cluster_name,
+                "fired": False,
+                "matched_indicators": list(matched),
+                "min_match": min_match,
+                "matched_count": len(matched),
+            })
 
     # Phase 2: DB mapping
     _db = db_path or DB_PATH
@@ -958,6 +975,13 @@ def build_clinical_case(
     rubric_strs = [e["rubric"] for e in rubric_entries]
     mind_count = sum(1 for e in rubric_entries if e.get("category") == "mind")
 
+    # Top 5 weighted rubrics for explainability
+    top_5_weighted = sorted(
+        [{"rubric": e["rubric"], "weight": e["weight"], "category": e.get("category", "unknown")} for e in rubric_entries],
+        key=lambda x: x["weight"],
+        reverse=True,
+    )[:5]
+
     _log.info(
         "Clinical extraction: %d concepts → %d rubrics (%d mind) → %d symptom_ids, clusters=%s",
         len(concepts), len(rubric_entries), mind_count, len(rows), clusters_active,
@@ -970,4 +994,7 @@ def build_clinical_case(
         "concepts": concepts,
         "mind_count": mind_count,
         "clusters_active": clusters_active,
+        "matched_concepts": concepts,
+        "cluster_flags": cluster_flags,
+        "top_5_weighted_rubrics": top_5_weighted,
     }
