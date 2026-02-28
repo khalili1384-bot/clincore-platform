@@ -5,6 +5,7 @@ Summary: ClinCore multi-tenant RLS-first core platform (Phase1 Lite)
 Requires-Python: >=3.11
 Requires-Dist: fastapi>=0.110
 Requires-Dist: uvicorn[standard]>=0.27
+Requires-Dist: httpx>=0.26
 Requires-Dist: pydantic>=2.6
 Requires-Dist: pydantic-settings>=2.2
 Requires-Dist: SQLAlchemy[asyncio]>=2.0.25
