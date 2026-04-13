@@ -16,22 +16,28 @@ async def test_create_doctor_tenant():
     tenant_id = str(uuid4())
     
     async with admin_engine.begin() as conn:
-        # Create tenant
-        await conn.execute(
+        # Create tenant (or get existing)
+        result = await conn.execute(
             text("""
                 INSERT INTO tenants (id, name, created_at)
                 VALUES (:id, :name, now())
-                ON CONFLICT (name) DO UPDATE SET id = EXCLUDED.id
+                ON CONFLICT (name) DO NOTHING
                 RETURNING id
             """),
             {"id": tenant_id, "name": "Dr Sofia Clinic"}
         )
         
-        # Get tenant ID
-        result = await conn.execute(
-            text("SELECT id FROM tenants WHERE name = 'Dr Sofia Clinic'")
-        )
-        tenant_id = str(result.scalar())
+        # Get tenant ID (from INSERT or SELECT if already exists)
+        returned_id = result.scalar()
+        if returned_id is None:
+            # Tenant already existed, fetch its ID
+            result = await conn.execute(
+                text("SELECT id FROM tenants WHERE name = :name"),
+                {"name": "Dr Sofia Clinic"}
+            )
+            tenant_id = str(result.scalar())
+        else:
+            tenant_id = str(returned_id)
         
         print(f"\n✅ Tenant created: {tenant_id}")
         print(f"   Name: Dr Sofia Clinic")
