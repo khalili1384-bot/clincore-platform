@@ -58,14 +58,47 @@ async def tenant_middleware(request: Request, call_next):
 # API key auth middleware
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    api_key = request.headers.get("Authorization")
-    if api_key is None or not api_key.startswith("Bearer "):
+    # Skip auth for health/docs/openapi
+    if request.url.path in ("/health", "/version", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+        return await call_next(request)
+
+    raw_auth = request.headers.get("Authorization")
+    if raw_auth is None or not raw_auth.startswith("Bearer "):
         return JSONResponse(status_code=401, content={"error": "Authorization: Bearer <api_key> required"})
-    # TODO: validate api_key against DB
-    api_key = api_key.replace("Bearer ", "")
-    request.state.api_key = api_key
-    response = await call_next(request)
-    return response
+
+    raw_key = raw_auth.removeprefix("Bearer ").strip()
+    key_hash = __import__("hashlib").sha256(raw_key.encode()).hexdigest()
+    tenant_id = request.headers.get("X-Tenant-Id", "").strip()
+
+    import os, psycopg
+    _db = os.getenv("DATABASE_URL") or (
+        f"postgresql://{os.getenv('DB_USER','clincore_user')}:"
+        f"{os.getenv('DB_PASSWORD','')}@"
+        f"{os.getenv('DB_HOST','127.0.0.1')}:"
+        f"{os.getenv('DB_PORT','5432')}/"
+        f"{os.getenv('DB_NAME','clincore')}"
+    )
+    try:
+        async with await psycopg.AsyncConnection.connect(_db) as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f"SELECT tenant_id FROM api_keys WHERE key_hash = '{key_hash}' AND is_active = true LIMIT 1"
+                )
+                row = await cur.fetchone()
+    except Exception as e:
+        logger.error("api_key_middleware DB error: %s", e)
+        return JSONResponse(status_code=503, content={"error": "auth service unavailable"})
+
+    if row is None:
+        return JSONResponse(status_code=401, content={"error": "invalid or inactive api key"})
+
+    db_tenant_id = str(row[0])
+    if tenant_id and db_tenant_id != tenant_id:
+        return JSONResponse(status_code=403, content={"error": "api key does not belong to this tenant"})
+
+    request.state.api_key = raw_key
+    request.state.validated_tenant_id = db_tenant_id
+    return await call_next(request)
 
 
 # Core health check
