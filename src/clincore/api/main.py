@@ -48,8 +48,8 @@ except ImportError as e:
 # Tenant validation middleware
 @app.middleware("http")
 async def tenant_middleware(request: Request, call_next):
-    # Skip tenant check for super-admin and auth endpoints
-    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth"):
+    # Skip tenant check for super-admin, auth, and shop endpoints
+    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop"):
         return await call_next(request)
     
     tenant_id = request.headers.get("X-Tenant-Id")
@@ -62,10 +62,10 @@ async def tenant_middleware(request: Request, call_next):
 # API key auth middleware
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    # Skip auth for health/docs/openapi/super-admin/auth
+    # Skip auth for health/docs/openapi/super-admin/auth/shop
     if request.url.path in ("/health", "/version", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
         return await call_next(request)
-    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth"):
+    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop"):
         return await call_next(request)
 
     raw_auth = request.headers.get("Authorization")
@@ -169,6 +169,14 @@ try:
     logger.info("✅ Clinical integrated")
 except ImportError as e:
     logger.warning("⚠️ Clinical skipped: %s", e)
+
+# Shop Product router (public read, admin write)
+try:
+    from clincore.clinical.shop_product_router import router as shop_router
+    app.include_router(shop_router)
+    logger.info("✅ Shop integrated")
+except ImportError as e:
+    logger.warning("⚠️ Shop skipped: %s", e)
 
 # Super Admin router (optional)
 try:

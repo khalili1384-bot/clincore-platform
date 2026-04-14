@@ -35,8 +35,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         
-        # Skip rate limiting for super-admin and auth endpoints
-        if path.startswith("/super-admin") or path.startswith("/auth"):
+        # Skip rate limiting for super-admin, auth, and shop endpoints
+        if path.startswith("/super-admin") or path.startswith("/auth") or path.startswith("/shop"):
             return await call_next(request)
         
         tenant_id = (
