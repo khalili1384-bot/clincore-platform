@@ -48,6 +48,10 @@ except ImportError as e:
 # Tenant validation middleware
 @app.middleware("http")
 async def tenant_middleware(request: Request, call_next):
+    # Skip tenant check for super-admin and auth endpoints
+    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth"):
+        return await call_next(request)
+    
     tenant_id = request.headers.get("X-Tenant-Id")
     if tenant_id is None:
         return JSONResponse(status_code=400, content={"error": "X-Tenant-Id is required"})
@@ -58,8 +62,10 @@ async def tenant_middleware(request: Request, call_next):
 # API key auth middleware
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    # Skip auth for health/docs/openapi
+    # Skip auth for health/docs/openapi/super-admin/auth
     if request.url.path in ("/health", "/version", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+        return await call_next(request)
+    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth"):
         return await call_next(request)
 
     raw_auth = request.headers.get("Authorization")
@@ -135,7 +141,7 @@ except ImportError as e:
 # Auth API keys router (optional)
 try:
     from clincore.api.auth_api_keys import router as auth_router
-    app.include_router(auth_router, prefix="/auth", tags=["auth"])
+    app.include_router(auth_router)
     logger.info("✅ Auth integrated")
 except ImportError as e:
     logger.warning("⚠️ Auth skipped: %s", e)

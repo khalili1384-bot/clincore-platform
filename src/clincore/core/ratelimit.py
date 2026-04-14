@@ -33,11 +33,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Tenant-scoped UTC-day rate limiter with PostgreSQL counter. Returns 429 when limit exceeded."""
 
     async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        
+        # Skip rate limiting for super-admin and auth endpoints
+        if path.startswith("/super-admin") or path.startswith("/auth"):
+            return await call_next(request)
+        
         tenant_id = (
             getattr(request.state, "tenant_id", None)
             or request.headers.get("X-Tenant-Id", "anonymous").strip()
         )
-        path = request.url.path
         limit = LIMITS.get(path, DEFAULT_LIMIT)
         
         # Connect to PostgreSQL and check rate limit
