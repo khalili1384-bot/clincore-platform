@@ -1,0 +1,49 @@
+{
+  "weights_by_mode": {
+    "mind_dominant": {
+      "MIND_CORE": 0.45,
+      "MENTAL_MOD": 0.2,
+      "PHYSICAL_MOD": 0.1,
+      "GENERALS": 0.15,
+      "LOCAL": 0.1
+    },
+    "constitution": {
+      "MIND_CORE": 0.3,
+      "MENTAL_MOD": 0.1,
+      "PHYSICAL_MOD": 0.25,
+      "GENERALS": 0.25,
+      "LOCAL": 0.1
+    },
+    "mixed": {
+      "MIND_CORE": 0.4,
+      "MENTAL_MOD": 0.15,
+      "PHYSICAL_MOD": 0.15,
+      "GENERALS": 0.2,
+      "LOCAL": 0.1
+    }
+  },
+  "grade_mult": {
+    "1": 0.6,
+    "2": 1.0,
+    "3": 1.5,
+    "4": 2.0,
+    "5": 2.2
+  },
+  "ailments_from_mult": 1.8,
+  "delusion_mult": 1.6,
+  "ssrp_mult": 1.4,
+  "ssrp_max_remedies": 15,
+  "ssrp_min_grade": 2,
+  "freq_alpha": 0.25,
+  "coverage_beta": 0.3,
+  "coverage_min_hit_ratio": 0.6,
+  "golden_rule_enabled": true,
+  "golden_rule_only_chronic": true,
+  "golden_rule_topk": 5,
+  "golden_rule_min_mind_grade": 3,
+  "golden_rule_penalty": 0.85,
+  "mind_dominant_min_mind_rubrics": 5,
+  "mind_dominant_min_strong_mind": 1,
+  "mind_dominant_strong_grade": 4,
+  "constitution_max_mind_rubrics": 2
+}

@@ -1,132 +1,98 @@
 """
-Super Admin API endpoints for tenant and API key management.
+Super Admin API endpoints.
 Requires X-Super-Admin-Key header for authentication.
 """
-import os
-import secrets
-import hashlib
-from typing import Any
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
+from clincore.core.config import settings
+from clincore.core.database import session_scope
 import psycopg
 
 router = APIRouter(prefix="/super-admin", tags=["super-admin"])
 
-# Super admin key from environment
-SUPER_ADMIN_KEY = os.getenv("SUPER_ADMIN_KEY", "super-secret-change-me")
-
-# PostgreSQL connection string (same pattern as ratelimit.py)
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    _host = os.getenv("DB_HOST", "127.0.0.1")
-    _port = os.getenv("DB_PORT", "5432")
-    _user = os.getenv("DB_USER", "clincore_user")
-    _pass = os.getenv("DB_PASSWORD", "")
-    _name = os.getenv("DB_NAME", "clincore")
-    DATABASE_URL = f"postgresql://{_user}:{_pass}@{_host}:{_port}/{_name}"
-
 
 def verify_super_admin_key(request: Request):
-    """Verify X-Super-Admin-Key header."""
+    """Verify X-Super-Admin-Key header. Missing or wrong → 401."""
     key = request.headers.get("X-Super-Admin-Key")
-    if not key or key != SUPER_ADMIN_KEY:
-        raise HTTPException(status_code=403, detail="Invalid or missing X-Super-Admin-Key")
-
-
-@router.post("/tenants")
-async def create_tenant(request: Request, payload: dict[str, Any]):
-    """Create a new tenant."""
-    verify_super_admin_key(request)
-    
-    tenant_id = payload.get("tenant_id")
-    name = payload.get("name")
-    
-    if not tenant_id or not name:
-        return JSONResponse(status_code=400, content={"error": "tenant_id and name are required"})
-    
-    try:
-        async with await psycopg.AsyncConnection.connect(DATABASE_URL) as conn:
-            async with conn.cursor() as cur:
-                insert_query = f"""
-                    INSERT INTO tenants (id, name, created_at)
-                    VALUES ('{tenant_id}', '{name}', now())
-                """
-                await cur.execute(insert_query)
-                await conn.commit()
-                return {"ok": True, "tenant_id": tenant_id}
-    except psycopg.errors.UniqueViolation:
-        return JSONResponse(status_code=409, content={"error": "tenant already exists"})
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    if not key or not settings.SUPER_ADMIN_KEY or key != settings.SUPER_ADMIN_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Super-Admin-Key")
 
 
 @router.get("/tenants")
 async def list_tenants(request: Request):
-    """List all tenants."""
+    """List all distinct tenant_ids from api_keys table."""
     verify_super_admin_key(request)
     
-    try:
-        async with await psycopg.AsyncConnection.connect(DATABASE_URL) as conn:
-            async with conn.cursor() as cur:
-                query = "SELECT id, name, created_at FROM tenants ORDER BY created_at DESC"
-                await cur.execute(query)
-                rows = await cur.fetchall()
-                tenants = [
-                    {
-                        "id": str(row[0]),
-                        "name": row[1],
-                        "created_at": row[2].isoformat() if row[2] else None
-                    }
-                    for row in rows
-                ]
-                return {"ok": True, "tenants": tenants}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    with session_scope() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT tenant_id FROM api_keys ORDER BY tenant_id")
+        rows = cur.fetchall()
+        tenants = [{"tenant_id": str(row[0])} for row in rows]
+        return {"ok": True, "tenants": tenants}
 
 
-@router.post("/api-keys")
-async def create_api_key(request: Request, payload: dict[str, Any]):
-    """Create a new API key for a tenant."""
+@router.get("/tenants/{tenant_id}/usage")
+async def tenant_usage(request: Request, tenant_id: str):
+    """Count usage_events per endpoint for a tenant (today UTC)."""
     verify_super_admin_key(request)
     
-    tenant_id = payload.get("tenant_id")
-    role = payload.get("role", "doctor")
-    
-    if not tenant_id:
-        return JSONResponse(status_code=400, content={"error": "tenant_id is required"})
-    
-    # Generate secure random key
-    raw_key = secrets.token_urlsafe(32)
-    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
-    
-    try:
-        async with await psycopg.AsyncConnection.connect(DATABASE_URL) as conn:
-            async with conn.cursor() as cur:
-                insert_query = f"""
-                    INSERT INTO api_keys (id, tenant_id, key_hash, role, is_active, created_at)
-                    VALUES (gen_random_uuid(), '{tenant_id}', '{key_hash}', '{role}', true, now())
-                """
-                await cur.execute(insert_query)
-                await conn.commit()
-                return {"ok": True, "api_key": raw_key, "tenant_id": tenant_id}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    with session_scope() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT endpoint_path, COUNT(*) as count "
+            f"FROM usage_events "
+            f"WHERE tenant_id = '{tenant_id}' "
+            f"AND created_at >= date_trunc('day', now() AT TIME ZONE 'UTC') "
+            f"GROUP BY endpoint_path ORDER BY count DESC"
+        )
+        rows = cur.fetchall()
+        usage = [{"endpoint": row[0], "count": row[1]} for row in rows]
+        return {"ok": True, "tenant_id": tenant_id, "usage_today": usage}
 
 
-@router.delete("/tenants/{tenant_id}")
-async def deactivate_tenant(request: Request, tenant_id: str):
-    """Deactivate all API keys for a tenant."""
+@router.get("/api-keys")
+async def list_api_keys(request: Request):
+    """List all api_keys (id, tenant_id, role, is_active, created_at)."""
     verify_super_admin_key(request)
     
-    try:
-        async with await psycopg.AsyncConnection.connect(DATABASE_URL) as conn:
-            async with conn.cursor() as cur:
-                update_query = f"""
-                    UPDATE api_keys SET is_active = false
-                    WHERE tenant_id = '{tenant_id}'
-                """
-                await cur.execute(update_query)
-                await conn.commit()
-                return {"ok": True, "deactivated": True}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    with session_scope() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, tenant_id, role, is_active, created_at FROM api_keys ORDER BY created_at DESC"
+        )
+        rows = cur.fetchall()
+        api_keys = [
+            {
+                "id": str(row[0]),
+                "tenant_id": str(row[1]),
+                "role": row[2],
+                "is_active": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+            for row in rows
+        ]
+        return {"ok": True, "api_keys": api_keys}
+
+
+@router.post("/api-keys/{key_id}/deactivate")
+async def deactivate_api_key(request: Request, key_id: str):
+    """Set is_active=False for an API key."""
+    verify_super_admin_key(request)
+    
+    with session_scope() as conn:
+        cur = conn.cursor()
+        cur.execute(f"UPDATE api_keys SET is_active = false WHERE id = '{key_id}'")
+        conn.commit()
+        return {"ok": True, "key_id": key_id, "is_active": False}
+
+
+@router.post("/api-keys/{key_id}/activate")
+async def activate_api_key(request: Request, key_id: str):
+    """Set is_active=True for an API key."""
+    verify_super_admin_key(request)
+    
+    with session_scope() as conn:
+        cur = conn.cursor()
+        cur.execute(f"UPDATE api_keys SET is_active = true WHERE id = '{key_id}'")
+        conn.commit()
+        return {"ok": True, "key_id": key_id, "is_active": True}

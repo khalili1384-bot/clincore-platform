@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-min-32-chars-long-for-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    SUPER_ADMIN_KEY: str = os.getenv("SUPER_ADMIN_KEY", "")
 
 
 settings = Settings()

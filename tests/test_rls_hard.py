@@ -6,7 +6,7 @@ import pytest
 import asyncio
 import uuid
 from sqlalchemy import text
-from clincore.core.db import engine, tenant_session
+from src.clincore.core.db import engine, tenant_session
 
 
 @pytest.fixture(scope="module")

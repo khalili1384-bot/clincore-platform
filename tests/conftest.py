@@ -11,6 +11,7 @@ if sys.platform == "win32":
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
+import httpx
 
 
 DATABASE_URL = os.getenv(
@@ -27,6 +28,13 @@ def app_engine():
 @pytest.fixture(scope="session")
 def admin_engine():
     return create_async_engine(DATABASE_URL, pool_pre_ping=True)
+
+
+@pytest.fixture
+async def async_client():
+    """Async HTTP client for API testing."""
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as client:
+        yield client
 
 
 @pytest.fixture

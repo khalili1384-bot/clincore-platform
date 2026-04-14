@@ -6,6 +6,8 @@ import asyncio
 import logging
 import sys
 
+from fastapi.staticfiles import StaticFiles
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -48,8 +50,8 @@ except ImportError as e:
 # Tenant validation middleware
 @app.middleware("http")
 async def tenant_middleware(request: Request, call_next):
-    # Skip tenant check for super-admin, auth, and shop endpoints
-    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop"):
+    # Skip tenant check for super-admin, auth, shop, and store endpoints
+    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop") or request.url.path.startswith("/store"):
         return await call_next(request)
     
     tenant_id = request.headers.get("X-Tenant-Id")
@@ -62,10 +64,10 @@ async def tenant_middleware(request: Request, call_next):
 # API key auth middleware
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    # Skip auth for health/docs/openapi/super-admin/auth/shop
+    # Skip auth for health/docs/openapi/super-admin/auth/shop/store
     if request.url.path in ("/health", "/version", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
         return await call_next(request)
-    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop"):
+    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop") or request.url.path.startswith("/store"):
         return await call_next(request)
 
     raw_auth = request.headers.get("Authorization")
@@ -211,3 +213,8 @@ async def startup_event():
 async def shutdown_event():
     """Shutdown event handler."""
     logger.info("🛑 ClinCore API shutting down...")
+
+# Shop frontend
+_frontend = r'D:\clincore-platform\frontend'
+if os.path.isdir(_frontend):
+    app.mount('/store', StaticFiles(directory=_frontend, html=True), name='shop')
