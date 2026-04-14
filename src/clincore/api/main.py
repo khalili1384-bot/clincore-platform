@@ -35,8 +35,8 @@ app.add_middleware(
 # Optional core middleware (if available)
 try:
     from clincore.core.middleware import RequestIDMiddleware
-    from clincore.core.rate_limit import RateLimitMiddleware
-    from clincore.core.error_handlers import register_error_handlers
+    from clincore.core.ratelimit import RateLimitMiddleware
+    from clincore.core.errorhandlers import register_error_handlers
     
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestIDMiddleware)

@@ -64,8 +64,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     
                     # Insert usage event
                     insert_query = f"""
-                        INSERT INTO usage_events (id, tenant_id, event_type, endpoint_path, status_code, created_at)
-                        VALUES (gen_random_uuid(), '{tenant_id}', 'api_request', '{path}', 200, now())
+                        INSERT INTO usage_events (tenant_id, event_type, endpoint_path, status_code, created_at)
+                        VALUES ('{tenant_id}', 'api_request', '{path}', 200, now())
                     """
                     await cur.execute(insert_query)
                     await conn.commit()
