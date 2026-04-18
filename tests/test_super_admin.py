@@ -1,7 +1,7 @@
 """Phase 16: Super Admin API tests"""
 import os
 import pytest
-from src.clincore.core.config import settings
+from clincore.core.config import settings
 
 DOCTOR_TENANT_ID = "5c091694-0e5a-46a0-b1d5-01fb7655f0ab"
 SUPER_ADMIN_KEY = os.getenv("SUPER_ADMIN_KEY", settings.SUPER_ADMIN_KEY)
