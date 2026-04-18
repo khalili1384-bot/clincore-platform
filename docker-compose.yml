@@ -1,31 +1,33 @@
-version: "3.9"
-
 services:
   api:
     build: .
-    image: clincore-api:latest
     container_name: clincore_api
     restart: unless-stopped
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REPERTORY_DB_PATH=/app/src/clincore/mcare_engine/data/synthesis.db
-      - SECRET_KEY=${SECRET_KEY}
-      - BOOTSTRAP_TOKEN=${BOOTSTRAP_TOKEN}
-      - APP_ENV=production
-      - DEBUG=false
     env_file:
-      - .env.production
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    networks:
-      - clincore_net
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
 
-networks:
-  clincore_net:
-    driver: bridge
+  db:
+    image: postgres:16-alpine
+    container_name: clincore_db
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: clincore
+      POSTGRES_USER: clincore_user
+      POSTGRES_PASSWORD: "805283631"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clincore_user -d clincore"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

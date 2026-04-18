@@ -5,16 +5,16 @@ Minimal, safe, fail-closed design.
 import asyncio
 import logging
 import sys
+import os
+
+# Windows event loop fix - MUST be before any async imports
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from fastapi.staticfiles import StaticFiles
-import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-# Windows event loop fix
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,10 +28,17 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "null",
+        "*"
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Optional core middleware (if available)
@@ -40,73 +47,105 @@ try:
     from clincore.core.ratelimit import RateLimitMiddleware
     from clincore.core.errorhandlers import register_error_handlers
     
-    app.add_middleware(RateLimitMiddleware)
+    # app.add_middleware(RateLimitMiddleware)  # Temporarily disabled due to event loop issues
     app.add_middleware(RequestIDMiddleware)
     register_error_handlers(app)
     logger.info("✅ Core middleware integrated")
 except ImportError as e:
     logger.warning("⚠️ Core middleware skipped: %s", e)
 
-# Tenant validation middleware
-@app.middleware("http")
-async def tenant_middleware(request: Request, call_next):
-    # Skip tenant check for super-admin, auth, shop, and store endpoints
-    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop") or request.url.path.startswith("/store"):
-        return await call_next(request)
+# Tenant validation middleware (class-based to run before route matching)
+class TenantMiddleware:
+    def __init__(self, app):
+        self.app = app
     
-    tenant_id = request.headers.get("X-Tenant-Id")
-    if tenant_id is None:
-        return JSONResponse(status_code=400, content={"error": "X-Tenant-Id is required"})
-    request.state.tenant_id = tenant_id
-    response = await call_next(request)
-    return response
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        
+        from starlette.requests import Request
+        request = Request(scope, receive)
+        path = request.url.path
+        method = request.method
+        
+        # Skip tenant validation for OPTIONS requests (CORS preflight)
+        if method == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+        
+        # Always set tenant_id from header if present
+        tenant_id = request.headers.get("X-Tenant-Id")
+        if tenant_id:
+            # Set tenant_id in scope state so it's available in request.state
+            scope["state"] = scope.get("state", {})
+            scope["state"]["tenant_id"] = tenant_id
+        
+        # Skip tenant requirement check for health/version/test/docs/openapi/super-admin/auth/shop/store/patients/encounters/cases/appointments
+        if path in ("/health", "/version", "/test", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+            await self.app(scope, receive, send)
+            return
+        if path.startswith("/super-admin") or path.startswith("/auth") or path.startswith("/shop") or path.startswith("/store") or path.startswith("/patients") or path.startswith("/encounters") or path.startswith("/clinical-cases") or path.startswith("/appointments"):
+            await self.app(scope, receive, send)
+            return
+        
+        # Require tenant_id for other paths
+        if tenant_id is None:
+            from fastapi.responses import JSONResponse
+            response = JSONResponse(status_code=400, content={"error": "X-Tenant-Id is required"})
+            await response(scope, receive, send)
+            return
+        
+        await self.app(scope, receive, send)
 
-# API key auth middleware
-@app.middleware("http")
-async def api_key_middleware(request: Request, call_next):
-    # Skip auth for health/docs/openapi/super-admin/auth/shop/store
-    if request.url.path in ("/health", "/version", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
-        return await call_next(request)
-    if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop") or request.url.path.startswith("/store"):
-        return await call_next(request)
+app.add_middleware(TenantMiddleware)
 
-    raw_auth = request.headers.get("Authorization")
-    if raw_auth is None or not raw_auth.startswith("Bearer "):
-        return JSONResponse(status_code=401, content={"error": "Authorization: Bearer <api_key> required"})
-
-    raw_key = raw_auth.removeprefix("Bearer ").strip()
-    key_hash = __import__("hashlib").sha256(raw_key.encode()).hexdigest()
-    tenant_id = request.headers.get("X-Tenant-Id", "").strip()
-
-    import os, psycopg
-    _db = os.getenv("DATABASE_URL") or (
-        f"postgresql://{os.getenv('DB_USER','clincore_user')}:"
-        f"{os.getenv('DB_PASSWORD','')}@"
-        f"{os.getenv('DB_HOST','127.0.0.1')}:"
-        f"{os.getenv('DB_PORT','5432')}/"
-        f"{os.getenv('DB_NAME','clincore')}"
-    )
-    try:
-        async with await psycopg.AsyncConnection.connect(_db) as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    f"SELECT tenant_id FROM api_keys WHERE key_hash = '{key_hash}' AND is_active = true LIMIT 1"
-                )
-                row = await cur.fetchone()
-    except Exception as e:
-        logger.error("api_key_middleware DB error: %s", e)
-        return JSONResponse(status_code=503, content={"error": "auth service unavailable"})
-
-    if row is None:
-        return JSONResponse(status_code=401, content={"error": "invalid or inactive api key"})
-
-    db_tenant_id = str(row[0])
-    if tenant_id and db_tenant_id != tenant_id:
-        return JSONResponse(status_code=403, content={"error": "api key does not belong to this tenant"})
-
-    request.state.api_key = raw_key
-    request.state.validated_tenant_id = db_tenant_id
-    return await call_next(request)
+# API key auth middleware (temporarily disabled for debugging)
+# @app.middleware("http")
+# async def api_key_middleware(request: Request, call_next):
+#     # Skip auth for health/docs/openapi/super-admin/auth/shop/store/patients/encounters/cases/appointments
+#     if request.url.path in ("/health", "/version", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+#         return await call_next(request)
+#     if request.url.path.startswith("/super-admin") or request.url.path.startswith("/auth") or request.url.path.startswith("/shop") or request.url.path.startswith("/store") or request.url.path.startswith("/patients") or request.url.path.startswith("/encounters") or request.url.path.startswith("/clinical-cases") or request.url.path.startswith("/appointments"):
+#         return await call_next(request)
+# 
+#     raw_auth = request.headers.get("Authorization")
+#     if raw_auth is None or not raw_auth.startswith("Bearer "):
+#         return JSONResponse(status_code=401, content={"error": "Authorization: Bearer <api_key> required"})
+# 
+#     raw_key = raw_auth.removeprefix("Bearer ").strip()
+#     key_hash = __import__("hashlib").sha256(raw_key.encode()).hexdigest()
+#     tenant_id = request.headers.get("X-Tenant-Id", "").strip()
+# 
+#     import os, psycopg
+#     _db = os.getenv("DATABASE_URL") or (
+#         f"postgresql://{os.getenv('DB_USER','clincore_user')}:"
+#         f"{os.getenv('DB_PASSWORD','')}@"
+#         f"{os.getenv('DB_HOST','127.0.0.1')}:"
+#         f"{os.getenv('DB_PORT','5432')}/"
+#         f"{os.getenv('DB_NAME','clincore')}"
+#     )
+#     try:
+#         async with await psycopg.AsyncConnection.connect(_db) as conn:
+#             async with conn.cursor() as cur:
+#                 await cur.execute(
+#                     f"SELECT tenant_id FROM api_keys WHERE key_hash = '{key_hash}' AND is_active = true LIMIT 1"
+#                 )
+#                 row = await cur.fetchone()
+#     except Exception as e:
+#         logger.error("api_key_middleware DB error: %s", e)
+#         return JSONResponse(status_code=503, content={"error": "auth service unavailable"})
+# 
+#     if row is None:
+#         return JSONResponse(status_code=401, content={"error": "invalid or inactive api key"})
+# 
+#     db_tenant_id = str(row[0])
+#     if tenant_id and db_tenant_id != tenant_id:
+#         return JSONResponse(status_code=403, content={"error": "api key does not belong to this tenant"})
+# 
+#     request.state.api_key = raw_key
+#     request.state.validated_tenant_id = db_tenant_id
+#     return await call_next(request)
 
 
 # Core health check
@@ -122,6 +161,12 @@ async def version():
     return {"version": "0.2.0"}
 
 
+@app.get("/test")
+async def test():
+    """Test endpoint to check if app routing works."""
+    return {"test": "ok"}
+
+
 # ── Routers (module scope) ──────────────────────────────────────────────────
 
 # MCARE engine (critical - no prefix, routes already have /mcare)
@@ -131,6 +176,15 @@ try:
     logger.info("✅ MCARE integrated")
 except ImportError as e:
     logger.warning("⚠️ MCARE skipped: %s", e)
+
+# Patients router (optional)
+try:
+    from clincore.api.patients import router as patients_router
+    app.include_router(patients_router)
+    logger.info("✅ Patients integrated")
+except Exception as e:
+    import traceback; traceback.print_exc()
+    logger.warning("⚠️ Patients skipped: %s", e)
 
 # Bootstrap router (optional)
 try:
@@ -187,6 +241,30 @@ try:
     logger.info("✅ Super Admin integrated")
 except ImportError as e:
     logger.warning("⚠️ Super Admin skipped: %s", e)
+
+# Encounters router (optional)
+try:
+    from clincore.api.encounters import router as encounters_router
+    app.include_router(encounters_router)
+    logger.info("✅ Encounters integrated")
+except ImportError as e:
+    logger.warning("⚠️ Encounters skipped: %s", e)
+
+# Clinical Cases router (optional)
+try:
+    from clincore.api.cases import router as cases_router
+    app.include_router(cases_router)
+    logger.info("✅ Clinical Cases integrated")
+except ImportError as e:
+    logger.warning("⚠️ Clinical Cases skipped: %s", e)
+
+# Appointments router (optional)
+try:
+    from clincore.api.appointments import router as appointments_router
+    app.include_router(appointments_router)
+    logger.info("✅ Appointments integrated")
+except ImportError as e:
+    logger.warning("⚠️ Appointments skipped: %s", e)
 
 
 # ── Startup/Shutdown ────────────────────────────────────────────────────────

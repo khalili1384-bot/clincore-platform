@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import text
 
-from src.clincore.core.db import admin_engine
+from clincore.core.db import admin_engine
 
 
 @pytest.mark.asyncio

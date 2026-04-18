@@ -103,7 +103,7 @@ def mcare_auto(request: Request, payload: dict[str, Any], explain: bool = False)
     request.state.case_id = case_id
     rubrics: list[str] = []
     try:
-        narrative = str(payload.get("narrative", "") or "")
+        narrative = str(payload.get("narrative") or payload.get("text") or "")
         top_n = int(payload.get("top_n", 10) or 10)
         case_type = str(payload.get("case_type", "auto") or "auto").lower()
         course = str(payload.get("course", "chronic") or "chronic").lower()
@@ -142,8 +142,16 @@ def mcare_auto(request: Request, payload: dict[str, Any], explain: bool = False)
         params = load_params(PARAMS_PATH)
         df = score_case(DB_PATH, case_df, {}, params, top_n, case_type, course)
         results = [
-            {"remedy": str(r["remedy"]), "score": round(float(r["mcare_score"]), 6)}
-            for _, r in df.head(top_n).iterrows()
+            {
+                "remedy": str(r["remedy"]),
+                "remedy_name": str(r["remedy"]),
+                "rank": i + 1,
+                "mcare_score": round(float(r["mcare_score"]), 6),
+                "score": round(float(r["mcare_score"]), 6),
+                "raw_score": round(float(r.get("raw_score", r["mcare_score"])), 6),
+                "coverage": round(float(r.get("coverage", 1.0)), 6),
+            }
+            for i, (_, r) in enumerate(df.head(top_n).iterrows())
         ]
         
         # Log case to file

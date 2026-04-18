@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.clincore.core.config import settings
+from clincore.core.config import settings
 
 # Windows event loop fix
 if sys.platform == "win32":
