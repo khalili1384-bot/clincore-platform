@@ -63,29 +63,14 @@ async def create_patient(request: Request):
 
 @router.get("/patients/{patient_id}")
 async def get_patient(request: Request, patient_id: str):
-    """Get single patient by ID."""
-    tenant_id = request.state.tenant_id
-    
-    def query_db():
-        with psycopg.connect(PSYCOPG_URL) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT id, full_name, created_at FROM patients WHERE id = '{patient_id}' AND tenant_id = '{tenant_id}'"
-                )
-                row = cur.fetchone()
-                
-                if not row:
-                    return None
-                
-                return {
-                    "id": str(row[0]),
-                    "full_name": row[1],
-                    "created_at": row[2].isoformat() if row[2] else None,
-                }
-    
-    result = await asyncio.to_thread(query_db)
-    
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Patient not found"})
-    
-    return {"ok": True, **result}
+    tenant_id = request.headers.get("X-Tenant-Id", "")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="X-Tenant-Id required")
+    async with tenant_session(tenant_id) as session:
+        result = await session.execute(
+            text(f"SELECT id, full_name, created_at FROM patients WHERE id = '{patient_id}' AND tenant_id = '{tenant_id}'")
+        )
+        row = result.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Patient not found")
+        return {"ok": True, "id": str(row[0]), "full_name": row[1], "created_at": str(row[2])}
