@@ -1,5 +1,3 @@
-import asyncio
-import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -9,20 +7,18 @@ from sqlalchemy.orm import sessionmaker
 
 from clincore.core.config import settings
 
-# Windows event loop fix
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
     echo=False,
+    connect_args={"server_settings": {"jit": "off"}} if "asyncpg" in settings.DATABASE_URL else {},
 )
 
 admin_engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
     echo=False,
+    connect_args={"server_settings": {"jit": "off"}} if "asyncpg" in settings.DATABASE_URL else {},
 )
 
 AsyncSessionLocal = sessionmaker(
