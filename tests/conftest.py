@@ -4,7 +4,6 @@ import os
 import secrets
 import sys
 
-# ---- FIX WINDOWS + PSYCOPG ASYNC ----
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -13,26 +12,24 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 import httpx
 
-
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg_async://clincore_user:805283631@127.0.0.1:5432/clincore",
+    "postgresql+asyncpg://clincore_user:805283631@127.0.0.1:5432/clincore",
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def app_engine():
     return create_async_engine(DATABASE_URL, pool_pre_ping=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def admin_engine():
     return create_async_engine(DATABASE_URL, pool_pre_ping=True)
 
 
 @pytest.fixture
 async def async_client():
-    """Async HTTP client for API testing."""
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as client:
         yield client
 
@@ -50,12 +47,8 @@ async def tenants(admin_engine):
         rows = (
             await conn.execute(
                 text(
-                    """
-                    SELECT id, name
-                    FROM tenants
-                    WHERE name IN ('tenant_a', 'tenant_b')
-                    ORDER BY name
-                    """
+                    "SELECT id, name FROM tenants "
+                    "WHERE name IN ('tenant_a', 'tenant_b') ORDER BY name"
                 )
             )
         ).fetchall()
@@ -63,10 +56,9 @@ async def tenants(admin_engine):
     ids_by_name = {name: tid for tid, name in rows}
     tenant_a_id = str(ids_by_name["tenant_a"])
     tenant_b_id = str(ids_by_name["tenant_b"])
-    
+
     yield tenant_a_id, tenant_b_id
-    
-    # Cleanup: DELETE CASCADE will remove related records
+
     async with admin_engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM tenants WHERE id IN (:a, :b)"),
@@ -76,7 +68,6 @@ async def tenants(admin_engine):
 
 @pytest.fixture
 async def tenant_api_key(admin_engine, tenants):
-    """Creates a real API key for the test tenant and returns (raw_key, tenant_id)"""
     t1, t2 = tenants
     raw_key = secrets.token_urlsafe(32)
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
@@ -86,10 +77,9 @@ async def tenant_api_key(admin_engine, tenants):
                     VALUES (gen_random_uuid(), :tid, :hash, 'user', true)"""),
             {"tid": t1, "hash": key_hash}
         )
-    
+
     yield raw_key, t1
-    
-    # Cleanup: Delete API key
+
     async with admin_engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM api_keys WHERE key_hash = :hash"),

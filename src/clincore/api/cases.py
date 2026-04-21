@@ -1,108 +1,56 @@
-"""
-Clinical Cases API endpoints.
-Requires X-Tenant-Id header (set by middleware).
-"""
-import os
-import asyncio
-import urllib.parse
-import psycopg
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Request, Query, HTTPException
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from clincore.core.db import tenant_session
 
 router = APIRouter(prefix="/clinical-cases", tags=["clinical-cases"])
-
-_raw = os.getenv("DATABASE_URL", "")
-if _raw:
-    PSYCOPG_URL = _raw.replace("postgresql+psycopg://", "postgresql://").replace("postgresql+asyncpg://", "postgresql://").replace("postgresql+psycopg_async://", "postgresql://")
-else:
-    _pw = urllib.parse.quote_plus(os.getenv("DB_PASSWORD", ""))
-    PSYCOPG_URL = (
-        f"postgresql://{os.getenv('DB_USER','clincore_user')}:{_pw}"
-        f"@{os.getenv('DB_HOST','127.0.0.1')}:"
-        f"{os.getenv('DB_PORT','5432')}/{os.getenv('DB_NAME','clincore')}"
-    )
 
 
 @router.get("/")
 async def list_cases(request: Request, patient_id: str = Query(None), status: str = Query(None)):
-    """List cases, optionally filtered by patient_id or status."""
-    tenant_id = request.state.tenant_id
-    
-    def query_db():
-        with psycopg.connect(PSYCOPG_URL) as conn:
-            with conn.cursor() as cur:
-                query = "SELECT id, patient_id, status, created_at FROM cases"
-                conditions = []
-                
-                if patient_id:
-                    conditions.append(f"patient_id = '{patient_id}'")
-                if status:
-                    conditions.append(f"status = '{status}'")
-                
-                conditions.append(f"tenant_id = '{tenant_id}'")
-                query += " WHERE " + " AND ".join(conditions)
-                
-                query += " ORDER BY created_at DESC"
-                
-                cur.execute(query)
-                rows = cur.fetchall()
-                cases = [
-                    {
-                        "id": str(row[0]),
-                        "patient_id": str(row[1]),
-                        "status": row[2],
-                        "created_at": row[3].isoformat() if row[3] else None,
-                    }
-                    for row in rows
-                ]
-                return cases
-    
-    cases = await asyncio.to_thread(query_db)
-    return {"ok": True, "cases": cases}
+    tenant_id = request.headers.get("X-Tenant-Id", "")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="X-Tenant-Id required")
+    async with tenant_session(tenant_id) as session:
+        if patient_id and status:
+            result = await session.execute(
+                text("SELECT id, patient_id, status, created_at FROM cases WHERE patient_id = :pid AND status = :st ORDER BY created_at DESC"),
+                {"pid": patient_id, "st": status}
+            )
+        elif patient_id:
+            result = await session.execute(
+                text("SELECT id, patient_id, status, created_at FROM cases WHERE patient_id = :pid ORDER BY created_at DESC"),
+                {"pid": patient_id}
+            )
+        elif status:
+            result = await session.execute(
+                text("SELECT id, patient_id, status, created_at FROM cases WHERE status = :st ORDER BY created_at DESC"),
+                {"st": status}
+            )
+        else:
+            result = await session.execute(
+                text("SELECT id, patient_id, status, created_at FROM cases ORDER BY created_at DESC")
+            )
+        rows = result.fetchall()
+        return {"ok": True, "cases": [{"id": str(r[0]), "patient_id": str(r[1]), "status": r[2], "created_at": str(r[3])} for r in rows]}
 
 
 @router.get("/{case_id}")
 async def get_case(request: Request, case_id: str):
-    """Get single case with case_results."""
-    tenant_id = request.state.tenant_id
-    
-    def query_db():
-        with psycopg.connect(PSYCOPG_URL) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"SELECT id, patient_id, status, created_at FROM cases WHERE id = '{case_id}' AND tenant_id = '{tenant_id}'"
-                )
-                row = cur.fetchone()
-                
-                if not row:
-                    return None
-                
-                # Get case results
-                cur.execute(
-                    f"SELECT id, result_type, result_data, created_at FROM case_results WHERE case_id = '{case_id}' ORDER BY created_at"
-                )
-                results_rows = cur.fetchall()
-                case_results = [
-                    {
-                        "id": str(r[0]),
-                        "result_type": r[1],
-                        "result_data": r[2],
-                        "created_at": r[3].isoformat() if r[3] else None,
-                    }
-                    for r in results_rows
-                ]
-                
-                return {
-                    "id": str(row[0]),
-                    "patient_id": str(row[1]),
-                    "status": row[2],
-                    "created_at": row[3].isoformat() if row[3] else None,
-                    "case_results": case_results,
-                }
-    
-    result = await asyncio.to_thread(query_db)
-    
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Case not found"})
-    
-    return {"ok": True, **result}
+    tenant_id = request.headers.get("X-Tenant-Id", "")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="X-Tenant-Id required")
+    async with tenant_session(tenant_id) as session:
+        result = await session.execute(
+            text("SELECT id, patient_id, status, created_at FROM cases WHERE id = :cid"),
+            {"cid": case_id}
+        )
+        row = result.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Case not found")
+        res = await session.execute(
+            text("SELECT id, rank, remedy_name, mcare_score, coverage FROM case_results WHERE case_id = :cid ORDER BY rank"),
+            {"cid": case_id}
+        )
+        results = [{"id": str(r[0]), "rank": r[1], "remedy_name": r[2], "mcare_score": r[3], "coverage": r[4]} for r in res.fetchall()]
+        return {"ok": True, "id": str(row[0]), "patient_id": str(row[1]), "status": row[2], "created_at": str(row[3]), "case_results": results}
