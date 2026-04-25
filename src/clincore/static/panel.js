@@ -1,4 +1,4 @@
-const CONFIG = {
+﻿const CONFIG = {
     apiBase: "http://127.0.0.1:8000",
     tenantId: "5c091694-0e5a-46a0-b1d5-01fb7655f0ab",
     apiKey: "AjT03TWidJwlMeUnaeH4GfP3WNQpEUvWVlN434kv0_w"
