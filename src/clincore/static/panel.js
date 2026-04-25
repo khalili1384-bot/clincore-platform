@@ -282,7 +282,7 @@ function renderPatientTable(patients) {
     if (emptyEl) emptyEl.style.display = "none";
     patients.forEach(function(p) {
         const tr = document.createElement("tr");
-        ["id", "full_name", "national_id", "phone"].forEach(function(field) {
+        ["patient_no", "full_name", "national_id", "phone"].forEach(function(field) {
             const td = document.createElement("td");
             td.textContent = safeText(p[field]);
             tr.appendChild(td);
