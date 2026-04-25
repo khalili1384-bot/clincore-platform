@@ -17,6 +17,7 @@ import re
 import sqlite3
 import unicodedata
 import logging
+import json
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ import pandas as pd
 _log = logging.getLogger("clincore.mcare_engine.clinical_extractor")
 
 DB_PATH = str(Path(__file__).resolve().parent / "data" / "synthesis.db")
+FA_RUBRIC_DICT_PATH = Path(__file__).resolve().parent / "data" / "fa_rubric_dict.json"
 
 # ═══════════════════════════════════════════════════════════════
 # LAYER A — Persian Normalization
@@ -386,6 +388,24 @@ SYNONYM_MAP: dict[str, str] = {
     "anticipation anxiety": "anticipatory_anxiety",
     "\u0627\u0636\u0637\u0631\u0627\u0628 \u0642\u0628\u0644": "anticipatory_anxiety",  # اضطراب قبل
 }
+
+
+def _extract_fa_rubrics(narrative: str) -> list[str]:
+    """Extract rubrics from Persian narrative using offline dictionary."""
+    if not narrative or not narrative.strip():
+        return []
+    if not FA_RUBRIC_DICT_PATH.exists():
+        return []
+    try:
+        data = json.loads(FA_RUBRIC_DICT_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    text = narrative.strip()
+    hits = []
+    for fa_term, rubric in data.items():
+        if fa_term and fa_term in text and rubric not in hits:
+            hits.append(rubric)
+    return hits
 
 
 def normalize_persian(text: str) -> str:
@@ -897,6 +917,62 @@ def build_clinical_case(
         "clusters_active": list[str],
       }
     """
+    # Try Persian offline dictionary first
+    fa_rubrics = _extract_fa_rubrics(narrative)
+    if fa_rubrics:
+        _log.info("Persian offline dictionary matched %d rubrics", len(fa_rubrics))
+        _db = db_path or DB_PATH
+        con = sqlite3.connect(_db)
+        try:
+            cur = con.cursor()
+            rubric_details = []
+            symptom_ids = []
+            for rubric in fa_rubrics:
+                sid, matched, method = map_rubric_to_symptom_id(cur, rubric)
+                if sid is not None:
+                    category = "mind" if rubric.startswith("MIND -") else "generals"
+                    rubric_details.append({
+                        "rubric": rubric,
+                        "category": category,
+                        "weight": 1.0,
+                        "symptom_id": sid,
+                        "matched_text": matched,
+                        "method": method,
+                        "concept_key": "_fa_dict",
+                    })
+                    symptom_ids.append(sid)
+            
+            if symptom_ids:
+                # Filter dead-end symptom_ids
+                ph = ",".join("?" * len(symptom_ids))
+                cur.execute(f"SELECT DISTINCT symptom_id FROM symptom_remedies WHERE symptom_id IN ({ph})", symptom_ids)
+                valid_sids = {r[0] for r in cur.fetchall()}
+                
+                rows = []
+                for entry in rubric_details:
+                    sid = entry.get("symptom_id")
+                    if sid in valid_sids:
+                        rows.append({"symptom_id": int(sid), "weight": 1.0})
+                
+                if rows:
+                    case_df = pd.DataFrame(rows, columns=["symptom_id", "weight"])
+                    mind_count = sum(1 for r in fa_rubrics if r.startswith("MIND -"))
+                    top_5 = [{"rubric": e["rubric"], "weight": e["weight"], "category": e["category"]} for e in rubric_details[:5]]
+                    
+                    return {
+                        "rubrics": fa_rubrics,
+                        "rubric_details": rubric_details,
+                        "weighted_case_df": case_df,
+                        "concepts": {},
+                        "mind_count": mind_count,
+                        "clusters_active": [],
+                        "matched_concepts": {},
+                        "cluster_flags": [],
+                        "top_5_weighted_rubrics": top_5,
+                    }
+        finally:
+            con.close()
+    
     # Layer A + B: extract semantic concepts
     concepts = extract_concepts(narrative)
     if not concepts:

@@ -25,6 +25,14 @@ app = FastAPI(
     description="Clinical AI platform with tenant isolation and RLS",
 )
 
+# Mount static files
+import pathlib as _pathlib
+app.mount(
+    "/static",
+    StaticFiles(directory=str(_pathlib.Path(__file__).resolve().parent.parent / "static")),
+    name="static",
+)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -68,6 +76,11 @@ class TenantMiddleware:
         request = Request(scope, receive)
         path = request.url.path
         method = request.method
+        
+        # Skip tenant validation for static files
+        if path.startswith("/static") or path.startswith("/panel"):
+            await self.app(scope, receive, send)
+            return
         
         # Skip tenant validation for OPTIONS requests (CORS preflight)
         if method == "OPTIONS":
@@ -265,6 +278,14 @@ try:
     logger.info("✅ Appointments integrated")
 except ImportError as e:
     logger.warning("⚠️ Appointments skipped: %s", e)
+
+# Panel router (optional)
+try:
+    from clincore.ui.panel_router import router as panel_router
+    app.include_router(panel_router)
+    logger.info("✅ Panel integrated")
+except ImportError as e:
+    logger.warning("⚠️ Panel skipped: %s", e)
 
 
 # ── Startup/Shutdown ────────────────────────────────────────────────────────
