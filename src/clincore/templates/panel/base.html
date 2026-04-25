@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClinCore Panel v{{ version }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/panel.css">
+</head>
+<body class="rtl">
+<div id="app-shell">
+
+  <aside id="sidebar">
+    <div id="brand">
+      <div id="brand-mark">C</div>
+      <div id="brand-text">
+        <span id="brand-name">ClinCore</span>
+        <span id="version-badge">v{{ version }}</span>
+      </div>
+    </div>
+    <nav id="main-nav">
+      <ul>
+        <li>
+          <a href="#" class="nav-link active" data-section="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span data-i18n="dashboard">داشبورد</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-section="new-patient">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="4" x2="19" y2="10"/><line x1="16" y1="7" x2="22" y2="7"/></svg>
+            <span data-i18n="new_patient">بیمار جدید</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-section="patient-list">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span data-i18n="patient_list">لیست بیماران</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-section="new-encounter">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+            <span data-i18n="new_encounter">ویزیت جدید</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-section="mcare">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>MCARE</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link" data-section="prescription">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span data-i18n="prescription">نسخه</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <div id="sidebar-footer">
+      <button id="lang-toggle" title="Toggle Language">EN</button>
+    </div>
+  </aside>
+
+  <main id="main-content">
+
+    <!-- ══════════════════════════════ DASHBOARD ══════════════════════════════ -->
+    <section id="section-dashboard" class="panel-section active">
+      <div class="section-header">
+        <h1 class="section-title" data-i18n="dashboard">داشبورد</h1>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon--blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" data-i18n="total_patients">کل بیماران</span>
+            <span class="stat-value" id="stat-patients">—</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon--green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" data-i18n="total_encounters">ویزیت‌ها</span>
+            <span class="stat-value" id="stat-encounters">—</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon--indigo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" data-i18n="mcare_analyses">تحلیل‌های MCARE</span>
+            <span class="stat-value" id="stat-mcare">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="notice-card">
+        <div class="notice-dot"></div>
+        <p data-i18n="welcome_msg">به پنل کلینیکی ClinCore خوش آمدید. سیستم فعال است.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ NEW PATIENT ══════════════════════════════ -->
+    <section id="section-new-patient" class="panel-section">
+      <div class="section-header">
+        <h1 class="section-title" data-i18n="new_patient">بیمار جدید</h1>
+      </div>
+      <div class="card">
+        <form id="form-new-patient" autocomplete="off">
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label data-i18n="first_name">نام</label>
+              <input type="text" name="first_name" required>
+            </div>
+            <div class="form-row">
+              <label data-i18n="last_name">نام خانوادگی</label>
+              <input type="text" name="last_name">
+            </div>
+            <div class="form-row">
+              <label data-i18n="national_id">کد ملی</label>
+              <input type="text" name="national_id">
+            </div>
+            <div class="form-row">
+              <label data-i18n="birth_date">تاریخ تولد</label>
+              <input type="date" name="birth_date">
+            </div>
+            <div class="form-row">
+              <label data-i18n="gender">جنسیت</label>
+              <select name="gender">
+                <option value="male" data-i18n="male">مرد</option>
+                <option value="female" data-i18n="female">زن</option>
+                <option value="other" data-i18n="other">سایر</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label data-i18n="phone">تلفن</label>
+              <input type="tel" name="phone">
+            </div>
+          </div>
+          <div class="form-row">
+            <label data-i18n="notes">یادداشت</label>
+            <textarea name="notes" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" data-i18n="save">ذخیره</button>
+            <span id="new-patient-msg" class="form-msg"></span>
+          </div>
+        </form>
+      </div>
+      <div class="card mt-16">
+        <h3 class="card-subtitle" data-i18n="patient_files">پرونده بیمار</h3>
+        <div class="placeholder-row">
+          <button class="btn-ghost" disabled data-i18n="save_local">ذخیره محلی (به زودی)</button>
+          <button class="btn-ghost" disabled data-i18n="save_db">ذخیره در پایگاه داده (به زودی)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ PATIENT LIST ══════════════════════════════ -->
+    <section id="section-patient-list" class="panel-section">
+      <div class="section-header">
+        <h1 class="section-title" data-i18n="patient_list">لیست بیماران</h1>
+        <div class="header-actions">
+          <input type="text" id="patient-search" data-i18n-placeholder="search" placeholder="جستجو...">
+          <button class="btn-secondary" id="btn-refresh-patients" data-i18n="refresh">بارگذاری مجدد</button>
+        </div>
+      </div>
+      <div class="card card--table">
+        <table class="data-table" id="patient-table">
+          <thead>
+            <tr>
+              <th data-i18n="id">شناسه</th>
+              <th data-i18n="first_name">نام</th>
+              <th data-i18n="last_name">نام خانوادگی</th>
+              <th data-i18n="national_id">کد ملی</th>
+              <th data-i18n="phone">تلفن</th>
+              <th data-i18n="actions">عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="patient-tbody"></tbody>
+        </table>
+        <div id="patient-list-empty" class="empty-state" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span data-i18n="no_patients">بیماری ثبت نشده است.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ NEW ENCOUNTER ══════════════════════════════ -->
+    <section id="section-new-encounter" class="panel-section">
+      <div class="section-header">
+        <h1 class="section-title" data-i18n="new_encounter">ویزیت جدید</h1>
+      </div>
+      <div class="card">
+        <form id="form-new-encounter" autocomplete="off">
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label data-i18n="patient_id">شناسه بیمار</label>
+              <input type="text" name="patient_id" required>
+              <div id="encounter-patient-name" style="font-weight:bold; color: #1a73e8; margin-bottom: 8px; text-align:right;"></div>
+            </div>
+            <div class="form-row">
+              <label data-i18n="encounter_date">تاریخ ویزیت</label>
+              <input type="date" name="encounter_date">
+            </div>
+          </div>
+          <div class="form-row">
+            <label data-i18n="chief_complaint">شکایت اصلی</label>
+            <textarea name="chief_complaint" rows="3"></textarea>
+          </div>
+          <div class="form-row">
+            <label data-i18n="clinical_notes">یادداشت بالینی</label>
+            <textarea name="clinical_notes" rows="4"></textarea>
+          </div>
+          <div class="form-row">
+            <label data-i18n="diagnosis">تشخیص</label>
+            <input type="text" name="diagnosis">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" data-i18n="save">ذخیره</button>
+            <span id="new-encounter-msg" class="form-msg"></span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ MCARE ══════════════════════════════ -->
+    <section id="section-mcare" class="panel-section">
+      <div class="section-header">
+        <h1 class="section-title">MCARE</h1>
+      </div>
+
+      <div id="mcare-form-wrap">
+        <div class="card">
+          <form id="form-mcare" autocomplete="off">
+            <div class="form-row">
+              <label data-i18n="symptom_ids">شرح حال بیمار</label>
+              <textarea name="symptom_ids" rows="5" placeholder="مثال: سردرد شدید و اضطراب و ترس و بی خوابی..."></textarea>
+            </div>
+            <div class="form-row">
+              <label data-i18n="patient_id_optional">شناسه بیمار (اختیاری)</label>
+              <input type="text" name="patient_id">
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" data-i18n="analyze">تحلیل</button>
+              <span id="mcare-msg" class="form-msg"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="mcare-result-wrap" style="display:none">
+        <div class="result-topbar">
+          <h2 data-i18n="mcare_results">نتایج تحلیل</h2>
+          <button id="btn-mcare-reset" class="btn-secondary" data-i18n="new_analysis">تحلیل جدید</button>
+        </div>
+        <div class="card mb-16">
+          <div class="rubrics-label" data-i18n="rubrics_label">Rubrics</div>
+          <div id="mcare-rubrics" class="rubrics-content">—</div>
+        </div>
+        <div class="card card--table">
+          <table class="data-table result-table">
+            <thead>
+              <tr>
+                <th data-i18n="rank">رتبه</th>
+                <th data-i18n="remedy">دارو</th>
+                <th>MCARE Score</th>
+                <th data-i18n="raw_score">Raw Score</th>
+                <th data-i18n="coverage">Coverage</th>
+                <th data-i18n="potency">پتانسی پیشنهادی</th>
+                <th data-i18n="actions">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="mcare-result-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card mt-16">
+          <h3 class="card-subtitle">Bach / Schuessler</h3>
+          <div class="placeholder-row">
+            <span class="badge-coming" data-i18n="coming_soon">به زودی فعال می‌شود</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ PRESCRIPTION ══════════════════════════════ -->
+    <section id="section-prescription" class="panel-section">
+      <div class="section-header">
+        <h1 class="section-title" data-i18n="prescription">نسخه</h1>
+      </div>
+      <div class="card mb-16">
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label data-i18n="patient_name">نام بیمار</label>
+            <input type="text" id="rx-patient-name">
+          </div>
+          <div class="form-row">
+            <label data-i18n="rx_date">تاریخ</label>
+            <input type="date" id="rx-date">
+          </div>
+          <div class="form-row">
+            <label data-i18n="remedy">دارو</label>
+            <input type="text" id="rx-remedy">
+          </div>
+          <div class="form-row">
+            <label data-i18n="potency">پتانسی</label>
+            <input type="text" id="rx-potency">
+          </div>
+          <div class="form-row">
+            <label data-i18n="dosage_notes">دستور مصرف</label>
+            <input type="text" id="rx-dosage">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" id="btn-generate-rx" data-i18n="generate_rx">تولید نسخه</button>
+        </div>
+      </div>
+      <div class="rx-grid">
+        <div class="card">
+          <div class="rx-col-header">
+            <h3 data-i18n="pharmacy_version">نسخه داروخانه</h3>
+            <span class="rx-badge rx-badge--pharmacy">Pharmacy</span>
+          </div>
+          <textarea id="rx-pharmacy" class="rx-textarea" rows="9" spellcheck="false"></textarea>
+          <div class="rx-actions">
+            <button class="btn-secondary" id="btn-copy-pharmacy" data-i18n="copy">کپی</button>
+            <button class="btn-secondary" id="btn-print-pharmacy" data-i18n="print">چاپ</button>
+            <button class="btn-ghost" disabled id="btn-share-tg" data-i18n="telegram">تلگرام (به زودی)</button>
+            <button class="btn-ghost" disabled id="btn-share-eitaa" data-i18n="eitaa">ایتا (به زودی)</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="rx-col-header">
+            <h3 data-i18n="patient_version">نسخه بیمار</h3>
+            <span class="rx-badge rx-badge--patient">Patient</span>
+          </div>
+          <textarea id="rx-patient" class="rx-textarea" rows="9" spellcheck="false"></textarea>
+          <div class="rx-actions">
+            <button class="btn-secondary" id="btn-copy-patient" data-i18n="copy">کپی</button>
+            <button class="btn-secondary" id="btn-print-patient" data-i18n="print">چاپ</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="/static/panel.js"></script>
+</body>
+</html>

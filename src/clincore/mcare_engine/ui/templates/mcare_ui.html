@@ -1,0 +1,189 @@
+﻿<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ClinCore — MCARE Narrative Analyzer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f0f2f5;--card:#fff;--border:#d1d5db;--accent:#1e293b;--accent2:#334155;
+      --green:#16a34a;--red:#dc2626;--muted:#64748b;--radius:14px}
+body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:#1e293b;
+     min-height:100vh;direction:rtl}
+.container{max-width:900px;margin:0 auto;padding:24px 16px}
+header{text-align:center;margin-bottom:28px}
+header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.5px}
+header p{color:var(--muted);font-size:.85rem;margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px;color:var(--accent2)}
+textarea#narrative{width:100%;min-height:160px;border:1px solid var(--border);border-radius:10px;
+        padding:12px;font-size:.95rem;line-height:1.7;resize:vertical;direction:rtl;
+        font-family:inherit;outline:none;transition:border .2s}
+textarea#narrative:focus{border-color:var(--accent)}
+.btn-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+button{border:none;border-radius:10px;padding:10px 22px;font-size:.9rem;font-weight:600;
+       cursor:pointer;transition:background .15s,transform .1s}
+button:active{transform:scale(.97)}
+#btnAnalyze{background:var(--accent);color:#fff}
+#btnAnalyze:hover{background:var(--accent2)}
+#btnClear{background:#e2e8f0;color:var(--accent)}
+#btnClear:hover{background:#cbd5e1}
+.sample-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sample-btn{background:#f1f5f9;border:1px solid var(--border);border-radius:8px;
+            padding:6px 14px;font-size:.78rem;color:var(--accent2);cursor:pointer}
+.sample-btn:hover{background:#e2e8f0}
+#status{margin-top:12px;font-size:.85rem;min-height:1.2em}
+.ok{color:var(--green)}.err{color:var(--red)}
+.rubrics-box{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500}
+.chip-mind{background:#ede9fe;color:#5b21b6}
+.chip-gen{background:#ecfdf5;color:#065f46}
+.chip-part{background:#fef3c7;color:#92400e}
+.chip-sleep{background:#e0f2fe;color:#075985}
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:10px}
+th{text-align:right;padding:8px 6px;border-bottom:2px solid var(--border);color:var(--muted);font-size:.8rem}
+td{padding:8px 6px;border-bottom:1px solid #f1f5f9}
+tr:hover td{background:#f8fafc}
+.num{font-variant-numeric:tabular-nums;direction:ltr;text-align:left}
+.debug-box{background:#f8fafc;border:1px solid var(--border);border-radius:10px;
+           padding:14px;margin-top:14px;font-size:.82rem;color:var(--muted)}
+.debug-box b{color:var(--accent)}
+pre#rawJson{background:#1e293b;color:#e2e8f0;border-radius:10px;padding:14px;
+            overflow:auto;max-height:300px;font-size:.78rem;line-height:1.5;margin-top:14px;
+            direction:ltr;text-align:left}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>ClinCore — MCARE Narrative Analyzer</h1>
+    <p>تحلیل بالینی روایت بیمار &bull; استخراج روبریک &bull; امتیازدهی رمدی</p>
+  </header>
+
+  <div class="card">
+    <label for="narrative">روایت بالینی بیمار (فارسی یا انگلیسی)</label>
+    <textarea id="narrative" placeholder="متن شرح حال بیمار را اینجا وارد کنید...&#10;&#10;مثال: بیمار با ترس مالی، وسواس نظم و تمیزی، کنترل شدید، بی‌خوابی در نیمه‌شب، سرمایی، بی‌قراری شبانه"></textarea>
+    <div class="sample-row">
+      <button class="sample-btn" onclick="setSample('en')">English Sample</button>
+      <button class="sample-btn" onclick="setSample('fa')">نمونه فارسی</button>
+    </div>
+    <div class="btn-row">
+      <button id="btnAnalyze">تحلیل / Analyze</button>
+      <button id="btnClear">پاک‌کردن</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <div class="card" id="rubricCard" style="display:none">
+    <label>روبریک‌های استخراج‌شده</label>
+    <div class="rubrics-box" id="rubricChips"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <label>نتایج رمدی (Top N)</label>
+    <table>
+      <thead><tr><th>#</th><th>Remedy</th><th>Score</th></tr></thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" id="debugCard" style="display:none">
+    <label>Debug Info</label>
+    <div class="debug-box" id="debugBox"></div>
+    <pre id="rawJson"></pre>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const SAMPLES = {
+  en: "Patient presents with grief and bereavement after loss of mother. Anxiety about health and finances. Fear of poverty. Controlling personality, fastidious about order and cleanliness. Insomnia worse at midnight. Chilly patient. Desire for sour food. Restlessness at night.",
+  fa: "\u0628\u06cc\u0645\u0627\u0631 \u0628\u0627 \u062a\u0631\u0633 \u0645\u0627\u0644\u06cc \u0648 \u0646\u06af\u0631\u0627\u0646\u06cc \u0627\u0632 \u0648\u0631\u0634\u06a9\u0633\u062a\u06af\u06cc\u060c \u0648\u0633\u0648\u0627\u0633 \u0646\u0638\u0645 \u0648 \u062a\u0645\u06cc\u0632\u06cc\u060c \u06a9\u0646\u062a\u0631\u0644 \u0634\u062f\u06cc\u062f\u060c \u0628\u06cc\u200c\u062e\u0648\u0627\u0628\u06cc \u062f\u0631 \u0646\u06cc\u0645\u0647\u200c\u0634\u0628\u060c \u0633\u0631\u0645\u0627\u06cc\u06cc\u060c \u0628\u06cc\u200c\u0642\u0631\u0627\u0631\u06cc \u0634\u0628\u0627\u0646\u0647"
+};
+
+function setSample(lang) { $("narrative").value = SAMPLES[lang]; }
+
+function chipClass(rubric) {
+  const u = rubric.toUpperCase();
+  if (u.startsWith("MIND")) return "chip chip-mind";
+  if (u.startsWith("SLEEP")) return "chip chip-sleep";
+  if (u.startsWith("GENERALS") || u.startsWith("PERSPIRATION")) return "chip chip-gen";
+  return "chip chip-part";
+}
+
+function setStatus(msg, cls) { $("status").textContent = msg; $("status").className = cls || ""; }
+
+$("btnClear").addEventListener("click", () => {
+  $("narrative").value = "";
+  $("rubricCard").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("debugCard").style.display = "none";
+  setStatus("");
+});
+
+$("btnAnalyze").addEventListener("click", async () => {
+  const narrative = $("narrative").value.trim();
+  if (!narrative) { setStatus("\u0644\u0637\u0641\u0627\u064b \u0631\u0648\u0627\u06cc\u062a \u0628\u06cc\u0645\u0627\u0631 \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f.", "err"); return; }
+
+  setStatus("\u062f\u0631 \u062d\u0627\u0644 \u062a\u062d\u0644\u06cc\u0644...", "");
+  $("rubricCard").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("debugCard").style.display = "none";
+
+  try {
+    const res = await fetch("/mcare/auto", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ narrative, top_n: 10 })
+    });
+    const data = await res.json();
+    $("rawJson").textContent = JSON.stringify(data, null, 2);
+    $("debugCard").style.display = "block";
+
+    if (!data.ok) {
+      setStatus("\u062e\u0637\u0627: " + (data.error?.message || "Unknown"), "err");
+      if (data.rubrics && data.rubrics.length) {
+        renderChips(data.rubrics);
+        $("rubricCard").style.display = "block";
+      }
+      return;
+    }
+
+    renderChips(data.rubrics);
+    $("rubricCard").style.display = "block";
+
+    const tbody = $("tblBody"); tbody.innerHTML = "";
+    (data.results || []).forEach((r, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + (i+1) + "</td><td><b>" + r.remedy + "</b></td><td class='num'>" + r.score.toFixed(4) + "</td>";
+      tbody.appendChild(tr);
+    });
+    $("resultCard").style.display = "block";
+
+    const dbg = data.debug || {};
+    $("debugBox").innerHTML =
+      "<b>Matched:</b> " + (dbg.matched_count ?? "?") +
+      " &bull; <b>Unmapped:</b> " + (dbg.unmapped_rubrics?.join(", ") || "none") +
+      " &bull; <b>Mind rubrics:</b> " + (dbg.mind_count ?? "?") +
+      " &bull; <b>Clusters:</b> " + (dbg.clusters_active?.join(", ") || "none");
+
+    setStatus("\u062a\u062d\u0644\u06cc\u0644 \u06a9\u0627\u0645\u0644 \u0634\u062f. " + data.results.length + " \u0631\u0645\u062f\u06cc \u06cc\u0627\u0641\u062a \u0634\u062f.", "ok");
+  } catch(e) {
+    setStatus("\u062e\u0637\u0627\u06cc \u0634\u0628\u06a9\u0647: " + e.message, "err");
+  }
+});
+
+function renderChips(rubrics) {
+  const box = $("rubricChips"); box.innerHTML = "";
+  rubrics.forEach(r => {
+    const span = document.createElement("span");
+    span.className = chipClass(r);
+    span.textContent = r;
+    box.appendChild(span);
+  });
+}
+</script>
+</body>
+</html>

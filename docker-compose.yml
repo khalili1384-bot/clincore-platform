@@ -1,0 +1,33 @@
+services:
+  api:
+    build: .
+    container_name: clincore_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: clincore_db
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: clincore
+      POSTGRES_USER: clincore_user
+      POSTGRES_PASSWORD: "805283631"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clincore_user -d clincore"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

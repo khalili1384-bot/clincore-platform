@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClinCore — پنل پزشک</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<style>
+/* ===== TOKENS ===== */
+:root {
+  --text-xs:clamp(.75rem,.7rem + .25vw,.875rem);
+  --text-sm:clamp(.875rem,.8rem + .35vw,1rem);
+  --text-base:clamp(1rem,.95rem + .25vw,1.125rem);
+  --text-lg:clamp(1.125rem,1rem + .5vw,1.375rem);
+  --text-xl:clamp(1.375rem,1.1rem + .8vw,1.875rem);
+  --sp1:.25rem;--sp2:.5rem;--sp3:.75rem;--sp4:1rem;--sp5:1.25rem;
+  --sp6:1.5rem;--sp8:2rem;--sp10:2.5rem;--sp12:3rem;
+  --r-sm:.375rem;--r-md:.5rem;--r-lg:.75rem;--r-xl:1rem;--r-full:9999px;
+  --ease:180ms cubic-bezier(.16,1,.3,1);
+  --font:Inter,system-ui,sans-serif;
+}
+[data-theme="dark"] {
+  --bg:#0c0e14;--surf:#12151f;--surf2:#181c28;--surf3:#1f2435;--surf4:#252a3a;
+  --brd:rgba(255,255,255,.07);--brd2:rgba(255,255,255,.13);
+  --txt:#dde3f0;--txt2:#8892a4;--txt3:#454e60;
+  --pri:#4f8ef7;--pri-h:#3b7af0;--pri-hl:rgba(79,142,247,.1);--pri-dim:rgba(79,142,247,.06);
+  --grn:#34d399;--grn-hl:rgba(52,211,153,.1);
+  --red:#f87171;--red-hl:rgba(248,113,113,.1);
+  --ylw:#fbbf24;--ylw-hl:rgba(251,191,36,.1);
+  --cyn:#22d3ee;--cyn-hl:rgba(34,211,238,.08);
+  --sh:0 1px 3px rgba(0,0,0,.4);
+  --sh-lg:0 8px 32px rgba(0,0,0,.55);
+}
+[data-theme="light"] {
+  --bg:#f4f6fb;--surf:#fff;--surf2:#f8f9fd;--surf3:#eef0f6;--surf4:#e6e9f2;
+  --brd:rgba(0,0,0,.08);--brd2:rgba(0,0,0,.14);
+  --txt:#1a2035;--txt2:#5a6480;--txt3:#a0a8bc;
+  --pri:#2563eb;--pri-h:#1d4ed8;--pri-hl:rgba(37,99,235,.08);--pri-dim:rgba(37,99,235,.04);
+  --grn:#059669;--grn-hl:rgba(5,150,105,.08);
+  --red:#dc2626;--red-hl:rgba(220,38,38,.08);
+  --ylw:#d97706;--ylw-hl:rgba(217,119,6,.08);
+  --cyn:#0891b2;--cyn-hl:rgba(8,145,178,.08);
+  --sh:0 1px 3px rgba(0,0,0,.08);
+  --sh-lg:0 8px 32px rgba(0,0,0,.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:var(--font);font-size:var(--text-sm);color:var(--txt);background:var(--bg);-webkit-font-smoothing:antialiased}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+input,textarea,select{font:inherit;color:var(--txt);background:var(--surf2);border:1px solid var(--brd);border-radius:var(--r-md);padding:var(--sp2) var(--sp3);outline:none;transition:border-color var(--ease),box-shadow var(--ease)}
+input:focus,textarea:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-hl)}
+textarea{resize:vertical;min-height:90px;line-height:1.6}
+select{cursor:pointer}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:var(--sp3) var(--sp4);border-bottom:1px solid var(--brd)}
+th{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--txt2);background:var(--surf2);position:sticky;top:0;z-index:2}
+tr:hover td{background:var(--surf2)}
+td{font-size:var(--text-sm)}
+.mono{font-family:"SF Mono",Consolas,monospace;font-variant-numeric:tabular-nums}
+
+/* ===== LAYOUT ===== */
+.shell{display:grid;grid-template-columns:56px 1fr;height:100dvh;transition:grid-template-columns var(--ease)}
+.shell.expanded{grid-template-columns:220px 1fr}
+.sidebar{background:var(--surf);border-right:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:20}
+.main{overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+
+/* ===== SIDEBAR ===== */
+.sb-top{padding:var(--sp4) var(--sp3);border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:var(--sp3);min-height:60px}
+.logo-icon{flex-shrink:0;width:32px;height:32px}
+.logo-text{white-space:nowrap;overflow:hidden;opacity:0;transition:opacity var(--ease)}
+.shell.expanded .logo-text{opacity:1}
+.logo-name{font-size:var(--text-base);font-weight:700;color:var(--txt)}
+.logo-sub{font-size:var(--text-xs);color:var(--txt2)}
+.sb-toggle{position:absolute;right:-12px;top:22px;width:24px;height:24px;background:var(--surf);border:1px solid var(--brd);border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--ease);z-index:30}
+.sb-toggle:hover{background:var(--surf3)}
+.sb-toggle svg{transition:transform .3s ease}
+.shell.expanded .sb-toggle svg{transform:rotate(180deg)}
+.sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:var(--sp3) 0}
+.nav-section{padding:0 var(--sp3) var(--sp1);margin-top:var(--sp4)}
+.nav-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--txt3);white-space:nowrap;overflow:hidden;opacity:0;transition:opacity var(--ease)}
+.shell.expanded .nav-section-label{opacity:1}
+.nav-item{display:flex;align-items:center;gap:var(--sp3);padding:var(--sp2) var(--sp3);margin:1px var(--sp2);border-radius:var(--r-md);cursor:pointer;color:var(--txt2);transition:color var(--ease),background var(--ease);white-space:nowrap;overflow:hidden;position:relative}
+.nav-item:hover{color:var(--txt);background:var(--surf3)}
+.nav-item.active{color:var(--pri);background:var(--pri-hl)}
+.nav-item svg{flex-shrink:0}
+.nav-label{opacity:0;transition:opacity var(--ease)}
+.shell.expanded .nav-label{opacity:1}
+.nav-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:var(--r-full);padding:1px 6px;margin-left:auto;flex-shrink:0;opacity:0;transition:opacity var(--ease)}
+.shell.expanded .nav-badge{opacity:1}
+.sb-footer{padding:var(--sp3);border-top:1px solid var(--brd)}
+.sb-user{display:flex;align-items:center;gap:var(--sp3);overflow:hidden}
+.sb-avatar{width:32px;height:32px;border-radius:var(--r-full);background:var(--pri-hl);display:flex;align-items:center;justify-content:center;color:var(--pri);font-weight:700;font-size:var(--text-xs);flex-shrink:0}
+.sb-user-info{opacity:0;transition:opacity var(--ease);overflow:hidden}
+.shell.expanded .sb-user-info{opacity:1}
+.sb-username{font-size:var(--text-xs);font-weight:600;color:var(--txt);white-space:nowrap}
+.sb-role{font-size:10px;color:var(--txt2)}
+
+/* ===== TOPBAR ===== */
+.topbar{padding:0 var(--sp6);height:56px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;background:var(--surf);flex-shrink:0;position:sticky;top:0;z-index:10}
+.topbar-left{display:flex;align-items:center;gap:var(--sp4)}
+.breadcrumb{font-size:var(--text-xs);color:var(--txt2);display:flex;align-items:center;gap:var(--sp2)}
+.breadcrumb span{color:var(--txt)}
+.topbar-right{display:flex;align-items:center;gap:var(--sp3)}
+.page-content{padding:var(--sp6) var(--sp8);flex:1}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;gap:var(--sp2);padding:var(--sp2) var(--sp4);border-radius:var(--r-md);font-weight:600;font-size:var(--text-sm);transition:background var(--ease),color var(--ease),border-color var(--ease);white-space:nowrap}
+.btn-sm{padding:var(--sp1) var(--sp3);font-size:var(--text-xs)}
+.btn-lg{padding:var(--sp3) var(--sp6);font-size:var(--text-base)}
+.btn-primary{background:var(--pri);color:#fff}.btn-primary:hover{background:var(--pri-h)}
+.btn-ghost{background:transparent;border:1px solid var(--brd);color:var(--txt2)}.btn-ghost:hover{background:var(--surf3);color:var(--txt)}
+.btn-danger{background:var(--red-hl);color:var(--red);border:1px solid rgba(248,113,113,.2)}.btn-danger:hover{background:var(--red);color:#fff}
+.btn-success{background:var(--grn-hl);color:var(--grn);border:1px solid rgba(52,211,153,.2)}.btn-success:hover{background:var(--grn);color:#000}
+.btn-icon{padding:var(--sp2);border-radius:var(--r-md);background:transparent;color:var(--txt2);border:1px solid var(--brd)}.btn-icon:hover{background:var(--surf3);color:var(--txt)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ===== BADGE ===== */
+.badge{display:inline-flex;align-items:center;gap:var(--sp1);padding:2px var(--sp2);border-radius:var(--r-full);font-size:11px;font-weight:600;line-height:1.5}
+.badge-blue{background:var(--pri-hl);color:var(--pri)}
+.badge-green{background:var(--grn-hl);color:var(--grn)}
+.badge-red{background:var(--red-hl);color:var(--red)}
+.badge-yellow{background:var(--ylw-hl);color:var(--ylw)}
+.badge-cyan{background:var(--cyn-hl);color:var(--cyn)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+
+/* ===== CARDS ===== */
+.card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r-lg);overflow:hidden}
+.card-header{padding:var(--sp4) var(--sp5);border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:var(--text-sm);font-weight:600;color:var(--txt)}
+.card-body{padding:var(--sp5)}
+.table-wrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+
+/* ===== KPI GRID ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--sp4);margin-bottom:var(--sp6)}
+.kpi{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r-lg);padding:var(--sp5);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;inset:0 0 auto;height:2px;background:var(--kpi-color,var(--pri))}
+.kpi-label{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--txt2);margin-bottom:var(--sp2)}
+.kpi-value{font-size:var(--text-xl);font-weight:700;font-variant-numeric:tabular-nums;color:var(--txt);transition:color .3s}
+.kpi-sub{font-size:var(--text-xs);color:var(--txt2);margin-top:var(--sp1)}
+.kpi-icon{position:absolute;right:var(--sp4);top:50%;transform:translateY(-50%);color:var(--txt3);opacity:.4}
+
+/* ===== FORM ===== */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp4)}
+.form-grid.single{grid-template-columns:1fr}
+.form-group{display:flex;flex-direction:column;gap:var(--sp2)}
+.form-group.span2{grid-column:span 2}
+.form-label{font-size:var(--text-xs);font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em}
+.form-group input,.form-group textarea,.form-group select{width:100%}
+.form-hint{font-size:var(--text-xs);color:var(--txt3)}
+
+/* ===== MODAL ===== */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center;padding:var(--sp4);opacity:0;pointer-events:none;transition:opacity var(--ease)}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal{background:var(--surf);border:1px solid var(--brd2);border-radius:var(--r-xl);width:100%;max-width:580px;box-shadow:var(--sh-lg);transform:translateY(12px);transition:transform var(--ease);max-height:90dvh;display:flex;flex-direction:column}
+.modal-backdrop.open .modal{transform:translateY(0)}
+.modal-header{padding:var(--sp5) var(--sp6);border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:var(--text-base);font-weight:700}
+.modal-close{width:28px;height:28px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:var(--txt2)}.modal-close:hover{background:var(--surf3);color:var(--txt)}
+.modal-body{padding:var(--sp6);overflow-y:auto;flex:1}
+.modal-footer{padding:var(--sp4) var(--sp6);border-top:1px solid var(--brd);display:flex;justify-content:flex-end;gap:var(--sp3);flex-shrink:0}
+
+/* ===== MCARE RESULT ===== */
+.remedy-list{display:flex;flex-direction:column;gap:var(--sp3)}
+.remedy-card{background:var(--surf2);border:1px solid var(--brd);border-radius:var(--r-lg);padding:var(--sp4) var(--sp5);display:grid;grid-template-columns:36px 1fr auto;gap:var(--sp3);align-items:center;transition:border-color var(--ease)}
+.remedy-card:hover{border-color:var(--brd2)}
+.remedy-rank{width:36px;height:36px;border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--text-sm);flex-shrink:0}
+.rank-1{background:rgba(251,191,36,.15);color:var(--ylw)}
+.rank-2{background:rgba(156,163,175,.1);color:#9ca3af}
+.rank-3{background:rgba(180,120,80,.12);color:#b07850}
+.rank-n{background:var(--surf3);color:var(--txt2)}
+.remedy-name{font-weight:600;font-size:var(--text-sm);margin-bottom:2px}
+.remedy-meta{font-size:var(--text-xs);color:var(--txt2);display:flex;gap:var(--sp3)}
+.score-bar-bg{height:4px;background:var(--surf4);border-radius:var(--r-full);overflow:hidden;margin-top:var(--sp2)}
+.score-bar{height:100%;background:var(--pri);border-radius:var(--r-full);transition:width .6s ease}
+.score-value{font-size:var(--text-xs);font-weight:700;color:var(--txt2);white-space:nowrap}
+
+/* ===== TIMELINE ===== */
+.timeline{display:flex;flex-direction:column;gap:0;position:relative}
+.timeline-item{display:grid;grid-template-columns:20px 1fr;gap:var(--sp4);padding-bottom:var(--sp5)}
+.timeline-dot-col{display:flex;flex-direction:column;align-items:center;padding-top:3px}
+.timeline-dot{width:10px;height:10px;border-radius:var(--r-full);background:var(--pri);flex-shrink:0;position:relative;z-index:1}
+.timeline-line{width:1px;flex:1;background:var(--brd);margin-top:4px}
+.timeline-date{font-size:var(--text-xs);color:var(--txt2);margin-bottom:var(--sp1)}
+.timeline-content-box{background:var(--surf2);border:1px solid var(--brd);border-radius:var(--r-md);padding:var(--sp3) var(--sp4);margin-bottom:var(--sp1)}
+
+/* ===== LOADING ===== */
+.spinner{width:18px;height:18px;border:2px solid var(--brd);border-top-color:var(--pri);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skeleton{background:linear-gradient(90deg,var(--surf3) 25%,var(--surf4) 50%,var(--surf3) 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:var(--r-sm)}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:var(--sp12) var(--sp8);color:var(--txt2)}
+.empty-state svg{color:var(--txt3);margin-bottom:var(--sp4)}
+.empty-state h3{color:var(--txt);margin-bottom:var(--sp2)}
+.empty-state p{max-width:36ch;margin-bottom:var(--sp5);font-size:var(--text-sm)}
+
+/* ===== TOAST ===== */
+.toast-wrap{position:fixed;bottom:var(--sp6);right:var(--sp6);z-index:200;display:flex;flex-direction:column;gap:var(--sp3)}
+.toast{background:var(--surf2);border:1px solid var(--brd2);border-radius:var(--r-md);padding:var(--sp3) var(--sp4);box-shadow:var(--sh-lg);display:flex;align-items:center;gap:var(--sp3);min-width:260px;font-size:var(--text-sm);animation:slideUp .2s ease}
+.toast.ok{border-left:3px solid var(--grn)}.toast.err{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--pri)}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeOut{to{opacity:0;transform:translateY(4px)}}
+
+/* ===== DIVIDER ===== */
+.divider{height:1px;background:var(--brd);margin:var(--sp5) 0}
+.section-gap{margin-top:var(--sp6)}
+
+/* ===== LOGIN ===== */
+.login-page{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:300}
+.login-card{background:var(--surf);border:1px solid var(--brd2);border-radius:var(--r-xl);padding:var(--sp10);width:440px;box-shadow:var(--sh-lg)}
+.login-logo{display:flex;align-items:center;gap:var(--sp4);margin-bottom:var(--sp8)}
+.login-alert{padding:var(--sp3) var(--sp4);border-radius:var(--r-md);font-size:var(--text-sm);margin-bottom:var(--sp4);background:var(--red-hl);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+
+/* ===== DETAIL PANEL ===== */
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:var(--sp6)}
+.detail-name{font-size:var(--text-xl);font-weight:700;color:var(--txt);margin-bottom:var(--sp1)}
+.detail-meta{font-size:var(--text-xs);color:var(--txt2);display:flex;gap:var(--sp3)}
+
+/* SCORE RANK colors */
+.score-high{color:var(--grn)}.score-mid{color:var(--ylw)}.score-low{color:var(--red)}
+
+@media(max-width:768px){.shell{grid-template-columns:0 1fr}.page-content{padding:var(--sp4)}.form-grid{grid-template-columns:1fr}.form-group.span2{grid-column:span 1}}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-page" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg class="logo-icon" width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="#4f8ef7"/>
+        <path d="M12 20a8 8 0 0 1 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M28 20a8 8 0 0 1-8 8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="20" cy="20" r="3.5" fill="white"/>
+        <path d="M20 12v3M20 25v3M12 20h3M25 20h3" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
+      </svg>
+      <div>
+        <div style="font-size:var(--text-lg);font-weight:700;color:var(--txt)">ClinCore</div>
+        <div style="font-size:var(--text-xs);color:var(--txt2)">پنل پزشک v0.6</div>
+      </div>
+    </div>
+    <div id="login-err" class="login-alert" style="display:none"></div>
+    <div class="form-grid single" style="gap:var(--sp4)">
+      <div class="form-group">
+        <label class="form-label">Server URL</label>
+        <input id="l-url" type="text" value="http://127.0.0.1:8000"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tenant ID</label>
+        <input id="l-tid" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <input id="l-key" type="password" placeholder="Enter your API key..."/>
+      </div>
+      <button class="btn btn-lg btn-primary" onclick="doLogin()" style="width:100%;justify-content:center;margin-top:var(--sp2)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </button>
+    </div>
+    <div style="margin-top:var(--sp4);text-align:center">
+      <button class="btn btn-ghost btn-sm" onclick="fillDemo()" style="font-size:var(--text-xs)">Use Doctor Demo Credentials</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP SHELL ===== -->
+<div id="app" class="shell" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-top">
+      <svg class="logo-icon" width="32" height="32" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="#4f8ef7"/>
+        <path d="M12 20a8 8 0 0 1 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M28 20a8 8 0 0 1-8 8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="20" cy="20" r="3.5" fill="white"/>
+      </svg>
+      <div class="logo-text"><div class="logo-name">ClinCore</div><div class="logo-sub">پنل پزشک</div></div>
+    </div>
+    <div class="sb-toggle" onclick="toggleSidebar()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-item active" onclick="nav('dashboard')" id="nav-dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span class="nav-label">داشبورد</span>
+      </div>
+      <div class="nav-item" onclick="nav('patients')" id="nav-patients">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="nav-label">بیماران</span>
+      </div>
+      <div class="nav-item" onclick="nav('newcase')" id="nav-newcase">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <span class="nav-label">کیس جدید</span>
+      </div>
+      <div class="nav-item" onclick="nav('cases')" id="nav-cases">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span class="nav-label">کیس‌ها</span>
+      </div>
+      <div class="nav-item" onclick="nav('appointments')" id="nav-appointments">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="nav-label">نوبت‌ها</span>
+      </div>
+      <div class="divider" style="margin:var(--sp4) var(--sp3)"></div>
+      <div class="nav-item" onclick="toggleTheme()" id="nav-theme">
+        <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span class="nav-label" id="theme-label">حالت روشن</span>
+      </div>
+      <div class="nav-item" onclick="doLogout()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="nav-label">خروج</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sb-avatar">DR</div>
+        <div class="sb-user-info">
+          <div class="sb-username" id="sb-name">Doctor</div>
+          <div class="sb-role">پزشک معالج</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">
+          <span id="tb-section">داشبورد</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" onclick="nav('newcase')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          کیس جدید
+        </button>
+        <div style="font-size:var(--text-xs);color:var(--txt2)" id="tb-time"></div>
+      </div>
+    </div>
+
+    <!-- PAGES -->
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page-content">
+      <div style="margin-bottom:var(--sp6)">
+        <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--sp1)">داشبورد</h1>
+        <p style="font-size:var(--text-sm);color:var(--txt2)">خوش آمدید. خلاصه وضعیت کلینیک شما.</p>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi" style="--kpi-color:var(--pri)">
+          <div class="kpi-label">کل بیماران</div>
+          <div class="kpi-value" id="kpi-patients">—</div>
+          <div class="kpi-sub">بیماران ثبت‌شده</div>
+          <div class="kpi-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        </div>
+        <div class="kpi" style="--kpi-color:var(--grn)">
+          <div class="kpi-label">کل کیس‌ها</div>
+          <div class="kpi-value" id="kpi-cases">—</div>
+          <div class="kpi-sub">تحلیل‌های MCARE</div>
+          <div class="kpi-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        </div>
+        <div class="kpi" style="--kpi-color:var(--ylw)">
+          <div class="kpi-label">نوبت‌ها</div>
+          <div class="kpi-value" id="kpi-appts">—</div>
+          <div class="kpi-sub">کل نوبت‌ها</div>
+          <div class="kpi-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        </div>
+        <div class="kpi" style="--kpi-color:var(--cyn)">
+          <div class="kpi-label">صورتحساب معلق</div>
+          <div class="kpi-value" id="kpi-pending">—</div>
+          <div class="kpi-sub">کیس‌های در انتظار</div>
+          <div class="kpi-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp4)">
+        <div class="card">
+          <div class="card-header"><span class="card-title">آخرین بیماران</span><button class="btn btn-ghost btn-sm" onclick="nav('patients')">مشاهده همه</button></div>
+          <div id="dash-patients-list">
+            <div class="empty-state" style="padding:var(--sp8)">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">آخرین کیس‌ها</span><button class="btn btn-ghost btn-sm" onclick="nav('cases')">مشاهده همه</button></div>
+          <div id="dash-cases-list">
+            <div class="empty-state" style="padding:var(--sp8)">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PATIENTS -->
+    <div id="page-patients" class="page-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp6)">
+        <div>
+          <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--sp1)">بیماران</h1>
+          <p style="font-size:var(--text-sm);color:var(--txt2)">لیست بیماران ثبت‌شده</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-newpatient')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Patient
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="patients-count">بیماران</span>
+          <input id="patient-search" type="search" placeholder="Search by name..." style="width:220px" oninput="filterPatients(this.value)"/>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>نام</th><th>Patient ID</th><th>تاریخ ثبت</th><th>عملیات</th></tr></thead>
+            <tbody id="patients-body">
+              <tr><td colspan="4" style="text-align:center;padding:var(--sp8)"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PATIENT DETAIL -->
+    <div id="page-patient-detail" class="page-content" style="display:none">
+      <div style="display:flex;align-items:center;gap:var(--sp3);margin-bottom:var(--sp4)">
+        <button class="btn btn-ghost btn-sm" onclick="nav('patients')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <span style="color:var(--txt2);font-size:var(--text-xs)">Patients /</span>
+        <span id="detail-breadcrumb" style="font-size:var(--text-xs);color:var(--txt)"></span>
+      </div>
+      <div class="detail-header">
+        <div>
+          <div class="detail-name" id="detail-name">—</div>
+          <div class="detail-meta">
+            <span id="detail-id" class="mono" style="font-size:var(--text-xs);color:var(--txt2)"></span>
+            <span id="detail-date" style="color:var(--txt2)"></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--sp3)">
+          <button class="btn btn-primary btn-sm" id="detail-new-case-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Case
+          </button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp5)">
+        <div>
+          <h3 style="font-size:var(--text-base);font-weight:600;margin-bottom:var(--sp4)">Encounter History</h3>
+          <div id="detail-encounters" class="timeline">
+            <div class="empty-state" style="padding:var(--sp8)"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div>
+          <h3 style="font-size:var(--text-base);font-weight:600;margin-bottom:var(--sp4)">کیس‌های بالینی</h3>
+          <div id="detail-cases">
+            <div class="empty-state" style="padding:var(--sp8)"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW CASE -->
+    <div id="page-newcase" class="page-content" style="display:none">
+      <div style="margin-bottom:var(--sp6)">
+        <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--sp1)">کیس بالینی جدید</h1>
+        <p style="font-size:var(--text-sm);color:var(--txt2)">علائم بیمار را برای تحلیل هومیوپاتی MCARE وارد کنید</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 480px;gap:var(--sp6)">
+        <!-- FORM -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">جزئیات کیس</span></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group span2">
+                <label class="form-label">بیمار</label>
+                <select id="nc-patient">
+                  <option value="">— انتخاب بیمار —</option>
+                </select>
+                <span class="form-hint">Or <button style="background:none;border:none;color:var(--pri);cursor:pointer;font-size:var(--text-xs);padding:0" onclick="openModal('modal-newpatient')">افزودن بیمار جدید</button></span>
+              </div>
+              <div class="form-group span2">
+                <label class="form-label">علائم و شکایات</label>
+                <textarea id="nc-text" placeholder="علائم بیمار را با جزئیات وارد کنید. مُدالیته‌ها، احساسات، محل درد، زمان‌بندی و علائم ذهنی/عاطفی را ذکر کنید.&#10;&#10;مثال: درد سوزشی معده، شب‌ها بدتر، با نوشیدنی سرد بهتر. مضطرب، بی‌قرار، تشنگی زیاد با جرعه‌های کوچک. ترس از تنها ماندن."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">تاریخ ویزیت</label>
+                <input id="nc-date" type="date"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">یادداشت (اختیاری)</label>
+                <input id="nc-notes" type="text" placeholder="یادداشت‌های اضافی..."/>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div id="nc-status" style="font-size:var(--text-xs);color:var(--txt2)"></div>
+              <button id="nc-submit" class="btn btn-primary btn-lg" onclick="submitCase()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                اجرای تحلیل MCARE
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- RESULT -->
+        <div>
+          <div class="card" id="nc-result-card">
+            <div class="card-header"><span class="card-title">نتایج MCARE</span><span id="nc-result-badge"></span></div>
+            <div class="card-body" id="nc-result-body">
+              <div class="empty-state" style="padding:var(--sp8)">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                <h3>در انتظار تحلیل</h3>
+                <p>فرم را پر کنید و تحلیل MCARE را اجرا کنید تا رتبه‌بندی داروها را ببینید.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CASES -->
+    <div id="page-cases" class="page-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp6)">
+        <div>
+          <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--sp1)">کیس‌های بالینی</h1>
+          <p style="font-size:var(--text-sm);color:var(--txt2)">تمام پرونده‌های تحلیل MCARE</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCases()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="cases-count">کیس‌ها</span>
+          <div style="display:flex;gap:var(--sp3)">
+            <select id="cases-filter-status" onchange="loadCases()" style="font-size:var(--text-xs)">
+              <option value="">همه وضعیت‌ها</option>
+              <option value="pending">در انتظار</option>
+              <option value="complete">تکمیل شده</option>
+              <option value="reviewed">بررسی شده</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>بیمار</th><th>علائم (پیش‌نمایش)</th><th>داروی برتر</th><th>وضعیت</th><th>صورتحساب</th><th>تاریخ</th><th></th></tr></thead>
+            <tbody id="cases-body">
+              <tr><td colspan="7" style="text-align:center;padding:var(--sp8)"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CASE DETAIL -->
+    <div id="page-case-detail" class="page-content" style="display:none">
+      <div style="display:flex;align-items:center;gap:var(--sp3);margin-bottom:var(--sp4)">
+        <button class="btn btn-ghost btn-sm" onclick="nav('cases')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <span style="color:var(--txt2);font-size:var(--text-xs)">کیس‌ها / جزئیات</span>
+      </div>
+      <div id="case-detail-content">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- APPOINTMENTS -->
+    <div id="page-appointments" class="page-content" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp6)">
+        <div>
+          <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--sp1)">نوبت‌ها</h1>
+          <p style="font-size:var(--text-sm);color:var(--txt2)">نوبت‌های برنامه‌ریزی‌شده بیماران</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-newappt')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Appointment
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title" id="appts-count">نوبت‌ها</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient</th><th>Date & Time</th><th>Status</th><th>Notes</th></tr></thead>
+            <tbody id="appts-body">
+              <tr><td colspan="4" style="text-align:center;padding:var(--sp8)"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+<!-- New Patient -->
+<div id="modal-newpatient" class="modal-backdrop" onclick="bgClose(event,'modal-newpatient')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">افزودن بیمار جدید</span>
+      <button class="modal-close" onclick="closeModal('modal-newpatient')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid single">
+        <div class="form-group">
+          <label class="form-label">نام و نام خانوادگی *</label>
+          <input id="np-name" type="text" placeholder="نام کامل بیمار"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-newpatient')">انصراف</button>
+      <button class="btn btn-primary" onclick="createPatient()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Save Patient
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- New Appointment -->
+<div id="modal-newappt" class="modal-backdrop" onclick="bgClose(event,'modal-newappt')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">نوبت جدید</span>
+      <button class="modal-close" onclick="closeModal('modal-newappt')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group span2">
+          <label class="form-label">بیمار *</label>
+          <select id="ap-patient"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date & Time *</label>
+          <input id="ap-datetime" type="datetime-local"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">وضعیت</label>
+          <select id="ap-status">
+            <option value="scheduled">برنامه‌ریزی شده</option>
+            <option value="confirmed">تأیید شده</option>
+            <option value="cancelled">لغو شده</option>
+            <option value="completed">تکمیل شده</option>
+          </select>
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">یادداشت</label>
+          <input id="ap-notes" type="text" placeholder="یادداشت اختیاری..."/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-newappt')">Cancel</button>
+      <button class="btn btn-primary" onclick="createAppointment()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Save Appointment
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Case Detail Modal -->
+<div id="modal-case" class="modal-backdrop" onclick="bgClose(event,'modal-case')">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <span class="modal-title">Case Analysis</span>
+      <button class="modal-close" onclick="closeModal('modal-case')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-case-body">Loading...</div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-case')">Close</button></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ===== STATE =====
+let S = { url:'', tid:'', key:'', patients:[], cases:[], appts:[], sidebarOpen:false, theme:'dark' };
+
+// ===== AUTH =====
+function fillDemo(){
+  document.getElementById('l-url').value='http://127.0.0.1:8000';
+  document.getElementById('l-tid').value='5c091694-0e5a-46a0-b1d5-01fb7655f0ab';
+  document.getElementById('l-key').value='AjT03TWidJwlMeUnaeH4GfP3WNQpEUvWVlN434kv0_w';
+}
+async function doLogin(){
+  const url=document.getElementById('l-url').value.trim().replace(/\/$/,'');
+  const tid=document.getElementById('l-tid').value.trim();
+  const key=document.getElementById('l-key').value.trim();
+  const errEl=document.getElementById('login-err');
+  errEl.style.display='none';
+  if(!tid||!key){errEl.textContent='Tenant ID and API Key are required.';errEl.style.display='block';return}
+  try{
+    const r=await fetch(url+'/patients',{headers:{'X-API-Key':key,'X-Tenant-Id':tid}});
+    if(r.status===401||r.status===400){errEl.textContent='Invalid credentials ('+r.status+'). Check Tenant ID and API Key.';errEl.style.display='block';return}
+    S={...S,url,tid,key};
+    document.getElementById('login-page').style.display='none';
+    document.getElementById('app').style.display='grid';
+    const short=tid.substring(0,8).toUpperCase();
+    document.getElementById('sb-avatar').textContent=short.substring(0,2);
+    document.getElementById('sb-name').textContent='Dr. '+short;
+    setInterval(()=>{document.getElementById('tb-time').textContent=new Date().toLocaleTimeString()},1000);
+    document.getElementById('nc-date').value=new Date().toISOString().split('T')[0];
+    nav('dashboard');
+  }catch(e){errEl.textContent='Cannot connect to '+url+'. Is the server running?';errEl.style.display='block'}
+}
+function doLogout(){S={url:'',tid:'',key:'',patients:[],cases:[],appts:[],sidebarOpen:false,theme:S.theme};document.getElementById('login-page').style.display='flex';document.getElementById('app').style.display='none'}
+document.getElementById('l-key').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+// ===== API =====
+const H=()=>({'Content-Type':'application/json','X-API-Key':S.key,'X-Tenant-Id':S.tid});
+async function GET(path){const r=await fetch(S.url+path,{headers:H()});if(!r.ok)throw new Error(r.status+' '+r.statusText);return r.json()}
+async function POST(path,body){const r=await fetch(S.url+path,{method:'POST',headers:H(),body:JSON.stringify(body)});if(!r.ok){const t=await r.text();throw new Error(r.status+': '+t)}return r.json()}
+
+// ===== NAV =====
+const pages=['dashboard','patients','patient-detail','newcase','cases','case-detail','appointments'];
+const sections={dashboard:'داشبورد',patients:'بیماران','patient-detail':'Patient Detail',newcase:'کیس جدید',cases:'کیس‌ها','case-detail':'جزئیات کیس',appointments:'نوبت‌ها'};
+function nav(p){
+  pages.forEach(x=>{
+    const el=document.getElementById('page-'+x);
+    if(el) el.style.display=x===p?'block':'none';
+    const nav=document.getElementById('nav-'+x);
+    if(nav) nav.classList.toggle('active',x===p);
+  });
+  document.getElementById('tb-section').textContent=sections[p]||p;
+  if(p==='dashboard')loadDashboard();
+  if(p==='patients')loadPatients();
+  if(p==='cases')loadCases();
+  if(p==='appointments')loadAppointments();
+  if(p==='newcase')loadPatientsIntoSelect('nc-patient');
+}
+
+// ===== SIDEBAR =====
+function toggleSidebar(){
+  S.sidebarOpen=!S.sidebarOpen;
+  document.getElementById('app').classList.toggle('expanded',S.sidebarOpen);
+}
+function toggleTheme(){
+  S.theme=S.theme==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',S.theme);
+  const icon=document.getElementById('theme-icon');
+  const label=document.getElementById('theme-label');
+  if(S.theme==='light'){
+    icon.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    label.textContent='Dark Mode';
+  }else{
+    icon.innerHTML='<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+    label.textContent='Light Mode';
+  }
+}
+
+// ===== PATIENTS =====
+let allPatients=[];
+async function loadPatients(){
+  document.getElementById('patients-body').innerHTML='<tr><td colspan="4" style="text-align:center;padding:var(--sp8)"><div class="spinner" style="margin:auto"></div></td></tr>';
+  try{
+    const data=await GET('/patients');
+    allPatients=Array.isArray(data)?data:(data.patients||[]);
+    S.patients=allPatients;
+    document.getElementById('patients-count').textContent='Patients ('+allPatients.length+')';
+    renderPatients(allPatients);
+    loadPatientsIntoSelect('nc-patient');
+    loadPatientsIntoSelect('ap-patient');
+  }catch(e){showPatientsError(e.message)}
+}
+function renderPatients(list){
+  const tb=document.getElementById('patients-body');
+  if(!list.length){tb.innerHTML='<tr><td colspan="4"><div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><h3>No patients yet</h3><p>Add your first patient to get started.</p></div></td></tr>';return}
+  tb.innerHTML=list.map(p=>`<tr>
+    <td><a href="#" onclick="viewPatient('${p.id}','${esc(p.full_name)}');return false" style="color:var(--pri);font-weight:600">${esc(p.full_name)}</a></td>
+    <td class="mono" style="font-size:var(--text-xs);color:var(--txt2)">${p.id.substring(0,8)}…</td>
+    <td style="color:var(--txt2);font-size:var(--text-xs)">${fmtDate(p.created_at)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="viewPatient('${p.id}','${esc(p.full_name)}')">مشاهده</button></td>
+  </tr>`).join('');
+}
+function filterPatients(q){renderPatients(allPatients.filter(p=>p.full_name.toLowerCase().includes(q.toLowerCase())))}
+function showPatientsError(msg){document.getElementById('patients-body').innerHTML=`<tr><td colspan="4" style="text-align:center;padding:var(--sp6);color:var(--red)">Error: ${esc(msg)}</td></tr>`}
+function loadPatientsIntoSelect(id){
+  const sel=document.getElementById(id);
+  if(!sel)return;
+  const cur=sel.value;
+  const opts=S.patients.map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join('');
+  sel.innerHTML='<option value="">— انتخاب بیمار —</option>'+opts;
+  if(cur)sel.value=cur;
+}
+async function createPatient(){
+  const name=document.getElementById('np-name').value.trim();
+  if(!name){toast('Patient name is required','err');return}
+  try{
+    const p=await POST('/patients',{full_name:name,tenant_id:S.tid});
+    S.patients.push(p);
+    allPatients.push(p);
+    closeModal('modal-newpatient');
+    document.getElementById('np-name').value='';
+    toast('Patient "'+esc(name)+'" added','ok');
+    loadPatientsIntoSelect('nc-patient');
+    loadPatientsIntoSelect('ap-patient');
+    if(document.getElementById('page-patients').style.display!=='none')renderPatients(allPatients);
+    document.getElementById('patients-count').textContent='Patients ('+allPatients.length+')';
+  }catch(e){toast('Failed: '+e.message,'err')}
+}
+async function viewPatient(id,name){
+  document.getElementById('page-patients').style.display='none';
+  document.getElementById('page-patient-detail').style.display='block';
+  document.getElementById('tb-section').textContent='Patient: '+name;
+  document.getElementById('detail-breadcrumb').textContent=name;
+  document.getElementById('detail-name').textContent=name;
+  document.getElementById('detail-id').textContent='ID: '+id;
+  document.getElementById('detail-new-case-btn').onclick=()=>{nav('newcase');setTimeout(()=>{document.getElementById('nc-patient').value=id},100)};
+  // Load encounters
+  document.getElementById('detail-encounters').innerHTML='<div class="empty-state" style="padding:var(--sp8)"><div class="spinner"></div></div>';
+  document.getElementById('detail-cases').innerHTML='<div class="empty-state" style="padding:var(--sp8)"><div class="spinner"></div></div>';
+  try{
+    const enc=await GET('/encounters?patient_id='+id);
+    const encList=Array.isArray(enc)?enc:(enc.encounters||[]);
+    renderTimeline(encList);
+  }catch(e){document.getElementById('detail-encounters').innerHTML='<p style="color:var(--red);font-size:var(--text-xs)">'+e.message+'</p>'}
+  try{
+    const cs=await GET('/clinical-cases?patient_id='+id);
+    const csList=Array.isArray(cs)?cs:(cs.cases||cs.items||[]);
+    renderPatientCases(csList);
+  }catch(e){document.getElementById('detail-cases').innerHTML='<p style="color:var(--red);font-size:var(--text-xs)">'+e.message+'</p>'}
+}
+function renderTimeline(list){
+  const el=document.getElementById('detail-encounters');
+  if(!list.length){el.innerHTML='<div class="empty-state" style="padding:var(--sp6)"><p>هنوز ویزیتی ثبت نشده.</p></div>';return}
+  el.innerHTML=list.map(e=>`<div class="timeline-item">
+    <div class="timeline-dot-col"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+    <div><div class="timeline-date">${fmtDate(e.encounter_date||e.created_at)}</div>
+    <div class="timeline-content-box"><div style="font-weight:600;font-size:var(--text-sm);margin-bottom:var(--sp1)">${esc(e.chief_complaint||'—')}</div></div></div>
+  </div>`).join('');
+}
+function renderPatientCases(list){
+  const el=document.getElementById('detail-cases');
+  if(!list.length){el.innerHTML='<div class="empty-state" style="padding:var(--sp6)"><p>هنوز کیسی ثبت نشده.</p></div>';return}
+  el.innerHTML='<div style="display:flex;flex-direction:column;gap:var(--sp3)">'+list.map(c=>{
+    const top=topRemedy(c);
+    return`<div class="card" style="cursor:pointer" onclick="showCaseModal('${c.id}')">
+      <div class="card-body" style="padding:var(--sp4)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--sp2)">
+          <span class="badge ${statusBadge(c.status)}">${esc(c.status||'در انتظار')}</span>
+          <span style="font-size:var(--text-xs);color:var(--txt2)">${fmtDate(c.created_at)}</span>
+        </div>
+        <div style="font-size:var(--text-xs);color:var(--txt2);margin-bottom:var(--sp2)">${esc((caseText(c)||'').substring(0,80))}${(caseText(c)||'').length>80?'…':''}</div>
+        ${top?`<div style="font-size:var(--text-xs);color:var(--grn);font-weight:600">Top: ${esc(top)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+// ===== DASHBOARD =====
+async function loadDashboard(){
+  try{
+    const [pt,cs,ap]=await Promise.allSettled([GET('/patients'),GET('/clinical-cases'),GET('/appointments')]);
+    const pts=pt.status==='fulfilled'?(Array.isArray(pt.value)?pt.value:(pt.value.patients||[])):[];
+    const css=cs.status==='fulfilled'?(Array.isArray(cs.value)?cs.value:(cs.value.cases||cs.value.items||[])):[];
+    const aps=ap.status==='fulfilled'?(Array.isArray(ap.value)?ap.value:(ap.value.appointments||[])):[];
+    S.patients=pts;allPatients=pts;S.cases=css;S.appts=aps;
+    animCount('kpi-patients',pts.length);
+    animCount('kpi-cases',css.length);
+    animCount('kpi-appts',aps.length);
+    animCount('kpi-pending',css.filter(c=>c.billing_status==='در انتظار'||!c.billing_status).length);
+    // Recent patients
+    const rp=document.getElementById('dash-patients-list');
+    if(!pts.length){rp.innerHTML='<div class="empty-state" style="padding:var(--sp6)"><p>No patients yet.</p></div>'}
+    else{rp.innerHTML='<table><tbody>'+pts.slice(0,5).map(p=>`<tr><td><a href="#" onclick="viewPatient('${p.id}','${esc(p.full_name)}');return false" style="color:var(--pri);font-weight:600">${esc(p.full_name)}</a></td><td style="color:var(--txt2);font-size:var(--text-xs)">${fmtDate(p.created_at)}</td></tr>`).join('')+'</tbody></table>'}
+    // Recent cases
+    const rc=document.getElementById('dash-cases-list');
+    if(!css.length){rc.innerHTML='<div class="empty-state" style="padding:var(--sp6)"><p>هنوز کیسی ثبت نشده.</p></div>'}
+    else{rc.innerHTML='<table><tbody>'+css.slice(0,5).map(c=>`<tr><td style="font-size:var(--text-xs)">${esc((caseText(c)||'No text').substring(0,40))}…</td><td><span class="badge ${statusBadge(c.status)}">${esc(c.status||'در انتظار')}</span></td></tr>`).join('')+'</tbody></table>'}
+    loadPatientsIntoSelect('nc-patient');loadPatientsIntoSelect('ap-patient');
+  }catch(e){console.error(e)}
+}
+function animCount(id,target){
+  const el=document.getElementById(id);if(!el)return;
+  let cur=0;const step=Math.ceil(target/20);
+  const iv=setInterval(()=>{cur=Math.min(cur+step,target);el.textContent=cur.toLocaleString();if(cur>=target)clearInterval(iv)},30);
+}
+
+// ===== NEW CASE =====
+async function submitCase(){
+  const patId=document.getElementById('nc-patient').value;
+  const text=document.getElementById('nc-text').value.trim();
+  const date=document.getElementById('nc-date').value;
+  const notes=document.getElementById('nc-notes').value.trim();
+  if(!patId){toast('لطفاً بیمار را انتخاب کنید','err');return}
+  if(text.length<10){toast('لطفاً علائم را وارد کنید (حداقل ۱۰ کاراکتر)','err');return}
+  const btn=document.getElementById('nc-submit');
+  const st=document.getElementById('nc-status');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> در حال تحلیل...';
+  st.textContent='موتور MCARE در حال پردازش...';
+  const body=document.getElementById('nc-result-body');
+  body.innerHTML='<div class="empty-state" style="padding:var(--sp8)"><div class="spinner"></div><h3 style="margin-top:var(--sp4)">Analyzing symptoms…</h3><p>MCARE engine processing</p></div>';
+  try{
+    // create encounter first if date
+    if(date){
+      try{await POST('/encounters',{patient_id:patId,tenant_id:S.tid,encounter_date:date,chief_complaint:text.substring(0,200)})}catch(_){}
+    }
+    // run mcare
+    const res=await POST('/mcare/auto',{patient_id:patId,text:text,notes:notes||undefined});
+    st.textContent='تحلیل کامل شد ✓';
+    renderMcareResult(res,body);
+    toast('تحلیل MCARE کامل شد','ok');
+  }catch(e){
+    body.innerHTML=`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><h3 style="color:var(--red)">تحلیل ناموفق بود</h3><p>${esc(e.message)}</p></div>`;
+    toast('خطا در تحلیل: '+e.message,'err');
+    st.textContent='';
+  }finally{
+    btn.disabled=false;btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Run MCARE Analysis';
+  }
+}
+function renderMcareResult(res,container){
+  const results=res.results||res.case_results||res.remedies||res.ranking||[];
+  const caseId=res.case_id||res.id||'';
+  const badge=document.getElementById('nc-result-badge');
+  if(results.length){badge.innerHTML='<span class="badge badge-green"><span class="dot"></span>'+results.length+' دارو</span>'}
+  else{badge.innerHTML='<span class="badge badge-yellow">نتیجه‌ای نیست</span>'}
+  if(!results.length){
+    container.innerHTML='<div class="empty-state" style="padding:var(--sp6)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><h3>دارویی یافت نشد</h3><p>علائم بیشتری از جمله جنبه‌های ذهنی و عاطفی وارد کنید.</p></div>';
+    return;
+  }
+  container.innerHTML='<div class="remedy-list">'+results.map((r,i)=>{
+    const rank=r.rank||i+1;
+    const name=r.remedy_name||r.name||'Unknown';
+    const score=parseFloat(r.mcare_score||r.score||0);
+    const raw=parseFloat(r.raw_score||0);
+    const cov=parseFloat(r.coverage||0);
+    const pct=Math.round(Math.min(score*100,100));
+    const rankClass=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
+    const scoreClass=score>0.7?'score-high':score>0.4?'score-mid':'score-low';
+    return`<div class="remedy-card">
+      <div class="remedy-rank ${rankClass}">#${rank}</div>
+      <div>
+        <div class="remedy-name">${esc(name)}</div>
+        <div class="remedy-meta">
+          ${score?`<span>امتیاز: <strong class="${scoreClass}">${score.toFixed(3)}</strong></span>`:''}
+          ${raw?`<span>خام: ${raw.toFixed(2)}</span>`:''}
+          ${cov?`<span>پوشش: ${(cov*100).toFixed(0)}%</span>`:''}
+        </div>
+        ${score?`<div class="score-bar-bg"><div class="score-bar" style="width:${pct}%"></div></div>`:''}
+      </div>
+      <div class="score-value">${pct}%</div>
+    </div>`;
+  }).join('')+'</div>'
+  +(caseId?`<div style="margin-top:var(--sp4);padding-top:var(--sp4);border-top:1px solid var(--brd);font-size:var(--text-xs);color:var(--txt2)">شناسه کیس: <span class="mono">${caseId}</span></div>`:'');
+}
+
+// ===== CASES =====
+async function loadCases(){
+  const tb=document.getElementById('cases-body');
+  tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:var(--sp8)"><div class="spinner" style="margin:auto"></div></td></tr>';
+  try{
+    const status=document.getElementById('cases-filter-status').value;
+    const qs=status?'?status='+status:'';
+    const data=await GET('/clinical-cases'+qs);
+    S.cases=Array.isArray(data)?data:(data.cases||data.items||[]);
+    document.getElementById('cases-count').textContent='Cases ('+S.cases.length+')';
+    if(!S.cases.length){tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/></svg><h3>هنوز کیسی ثبت نشده</h3><p>اولین کیس خود را از «کیس جدید» بسازید.</p></div></td></tr>';return}
+    tb.innerHTML=S.cases.map(c=>{
+      const top=topRemedy(c);
+      const txt=caseText(c)||'';
+      const pt=S.patients.find(p=>p.id===c.patient_id);
+      return`<tr>
+        <td style="font-weight:600;color:var(--txt)">${pt?esc(pt.full_name):'<span style="color:var(--txt2)">—</span>'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:var(--text-xs);color:var(--txt2)">${esc(txt.substring(0,60))}${txt.length>60?'…':''}</td>
+        <td>${top?`<span style="font-size:var(--text-xs);font-weight:600;color:var(--grn)">${esc(top)}</span>`:'<span style="color:var(--txt3)">—</span>'}</td>
+        <td><span class="badge ${statusBadge(c.status)}">${esc(c.status||'در انتظار')}</span></td>
+        <td><span class="badge ${billingBadge(c.billing_status)}">${esc(c.billing_status||'در انتظار')}</span></td>
+        <td style="color:var(--txt2);font-size:var(--text-xs)">${fmtDate(c.created_at)}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="showCaseModal('${c.id}')">مشاهده</button></td>
+      </tr>`;
+    }).join('');
+  }catch(e){tb.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--red);padding:var(--sp6)">Error: ${esc(e.message)}</td></tr>`;toast(e.message,'err')}
+}
+async function showCaseModal(id){
+  openModal('modal-case');
+  const body=document.getElementById('modal-case-body');
+  body.innerHTML='<div class="empty-state"><div class="spinner"></div></div>';
+  const c=S.cases.find(x=>x.id===id);
+  if(!c){body.innerHTML='<p style="color:var(--red)">Case not found in cache. Refresh cases list.</p>';return}
+  const pt=S.patients.find(p=>p.id===c.patient_id);
+  const results=c.case_results||c.results||c.ranking_snapshot?.results||[];
+  body.innerHTML=`
+    <div style="display:flex;gap:var(--sp4);margin-bottom:var(--sp5);flex-wrap:wrap">
+      <span class="badge ${statusBadge(c.status)}">${esc(c.status||'در انتظار')}</span>
+      <span class="badge ${billingBadge(c.billing_status)}">${esc(c.billing_status||'در انتظار')}</span>
+      <span style="font-size:var(--text-xs);color:var(--txt2)">${fmtDate(c.created_at)}</span>
+      ${pt?`<span style="font-size:var(--text-xs);color:var(--txt)">Patient: <strong>${esc(pt.full_name)}</strong></span>`:''}
+    </div>
+    <div style="background:var(--surf2);border:1px solid var(--brd);border-radius:var(--r-md);padding:var(--sp4);margin-bottom:var(--sp5)">
+      <div style="font-size:var(--text-xs);font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--sp2)">Symptoms</div>
+      <div style="font-size:var(--text-sm);line-height:1.7;color:var(--txt)">${esc(caseText(c)||'—')}</div>
+    </div>
+    ${results.length?'<div style="font-size:var(--text-xs);font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--sp3)">Remedy Rankings</div><div class="remedy-list">'+results.map((r,i)=>{
+      const rank=r.rank||i+1;const name=r.remedy_name||r.name||'?';
+      const score=parseFloat(r.mcare_score||r.score||0);const cov=parseFloat(r.coverage||0);const pct=Math.round(Math.min(score*100,100));
+      const rankClass=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
+      const scoreClass=score>0.7?'score-high':score>0.4?'score-mid':'score-low';
+      return`<div class="remedy-card"><div class="remedy-rank ${rankClass}">#${rank}</div><div><div class="remedy-name">${esc(name)}</div><div class="remedy-meta">${score?`<span>امتیاز: <strong class="${scoreClass}">${score.toFixed(3)}</strong></span>`:''}${cov?`<span>پوشش: ${(cov*100).toFixed(0)}%</span>`:''}</div>${score?`<div class="score-bar-bg"><div class="score-bar" style="width:${pct}%"></div></div>`:''}</div><div class="score-value">${pct}%</div></div>`;
+    }).join('')+'</div>':'<div class="empty-state" style="padding:var(--sp6)"><p>No remedy rankings available.</p></div>'}
+  `;
+}
+
+// ===== APPOINTMENTS =====
+async function loadAppointments(){
+  const tb=document.getElementById('appts-body');
+  tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:var(--sp8)"><div class="spinner" style="margin:auto"></div></td></tr>';
+  try{
+    const data=await GET('/appointments');
+    S.appts=Array.isArray(data)?data:(data.appointments||[]);
+    document.getElementById('appts-count').textContent='Appointments ('+S.appts.length+')';
+    if(!S.appts.length){tb.innerHTML='<tr><td colspan="4"><div class="empty-state"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><h3>No appointments yet</h3><p>Add your first appointment.</p></div></td></tr>';return}
+    tb.innerHTML=S.appts.map(a=>{
+      const pt=S.patients.find(p=>p.id===a.patient_id);
+      return`<tr>
+        <td style="font-weight:600">${pt?esc(pt.full_name):`<span class="mono" style="font-size:var(--text-xs);color:var(--txt2)">${a.patient_id.substring(0,8)}</span>`}</td>
+        <td style="font-size:var(--text-xs)">${fmtDateFull(a.appointment_date)}</td>
+        <td><span class="badge ${apptBadge(a.status)}">${esc(a.status||'scheduled')}</span></td>
+        <td style="font-size:var(--text-xs);color:var(--txt2)">${esc(a.notes||'—')}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){tb.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--red);padding:var(--sp6)">Error: ${esc(e.message)}</td></tr>`;toast(e.message,'err')}
+}
+async function createAppointment(){
+  const pid=document.getElementById('ap-patient').value;
+  const dt=document.getElementById('ap-datetime').value;
+  const status=document.getElementById('ap-status').value;
+  const notes=document.getElementById('ap-notes').value.trim();
+  if(!pid){toast('Select a patient','err');return}
+  if(!dt){toast('Date and time required','err');return}
+  try{
+    await POST('/appointments',{patient_id:pid,tenant_id:S.tid,scheduled_for:dt,status,notes:notes||undefined});
+    closeModal('modal-newappt');
+    document.getElementById('ap-datetime').value='';
+    document.getElementById('ap-notes').value='';
+    toast('Appointment saved','ok');
+    if(document.getElementById('page-appointments').style.display!=='none')loadAppointments();
+    else{const data=await GET('/appointments');S.appts=Array.isArray(data)?data:(data.appointments||[]);document.getElementById('kpi-appts').textContent=S.appts.length}
+  }catch(e){toast('Failed: '+e.message,'err')}
+}
+
+// ===== HELPERS =====
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtDate(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}catch{return d}}
+function fmtDateFull(d){if(!d)return'—';try{return new Date(d).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch{return d}}
+function topRemedy(c){const r=c.case_results||c.results||c.ranking_snapshot?.results||[];return r.length?(r[0].remedy_name||r[0].name||null):null}
+function caseText(c){return c.input_payload?.text||c.text||c.chief_complaint||''}
+function statusBadge(s){if(s==='complete'||s==='completed')return'badge-green';if(s==='reviewed')return'badge-blue';if(s==='error')return'badge-red';return'badge-yellow'}
+function billingBadge(s){if(s==='billed')return'badge-green';if(s==='paid')return'badge-blue';return'badge-yellow'}
+function apptBadge(s){if(s==='completed')return'badge-green';if(s==='confirmed')return'badge-blue';if(s==='cancelled')return'badge-red';return'badge-yellow'}
+
+// ===== MODAL =====
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function bgClose(e,id){if(e.target===e.currentTarget)closeModal(id)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-backdrop.open').forEach(m=>m.classList.remove('open'))}})
+
+// ===== TOAST =====
+function toast(msg,type='info'){
+  const w=document.getElementById('toast-wrap');
+  const el=document.createElement('div');el.className='toast '+type;
+  const icons={ok:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',err:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',info:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>'};
+  el.innerHTML=(icons[type]||icons.info)+' '+esc(msg);
+  w.appendChild(el);setTimeout(()=>{el.style.animation='fadeOut .3s ease forwards';setTimeout(()=>el.remove(),300)},3500);
+}
+</script>
+</body>
+</html>
