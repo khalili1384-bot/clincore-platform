@@ -4,16 +4,34 @@
 # All rights reserved. Unauthorized use strictly prohibited.
 # ───────────────────────────────────────────────────────
 import uuid
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Attach a unique X-Request-ID to every request and response."""
-
-    async def dispatch(self, request: Request, call_next):
+class RequestIDMiddleware:
+    """Attach a unique X-Request-ID to every request and response (pure ASGI)."""
+    
+    def __init__(self, app):
+        self.app = app
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        
+        from starlette.requests import Request
+        from starlette.datastructures import MutableHeaders
+        
+        request = Request(scope, receive)
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-        request.state.request_id = request_id
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        return response
+        
+        # Store in scope state
+        if "state" not in scope:
+            scope["state"] = {}
+        scope["state"]["request_id"] = request_id
+        
+        async def send_with_request_id(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers.append("X-Request-ID", request_id)
+            await send(message)
+        
+        await self.app(scope, receive, send_with_request_id)

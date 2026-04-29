@@ -14,6 +14,8 @@ depends_on = None
 
 def upgrade():
     op.add_column('patients', sa.Column('patient_no', sa.BigInteger(), nullable=True))
+    # Set default value for existing rows (0 = legacy patient)
+    op.execute("UPDATE patients SET patient_no = 0 WHERE patient_no IS NULL")
 
 def downgrade():
     op.drop_column('patients', 'patient_no')

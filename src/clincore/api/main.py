@@ -1,4 +1,4 @@
-"""
+﻿"""
 FastAPI entrypoint for ClinCore platform.
 Minimal, safe, fail-closed design.
 """
@@ -52,15 +52,75 @@ app.add_middleware(
 # Optional core middleware (if available)
 try:
     from clincore.core.middleware import RequestIDMiddleware
-    from clincore.core.ratelimit import RateLimitMiddleware
     from clincore.core.errorhandlers import register_error_handlers
     
-    # app.add_middleware(RateLimitMiddleware)  # Temporarily disabled due to event loop issues
     app.add_middleware(RequestIDMiddleware)
     register_error_handlers(app)
     logger.info("✅ Core middleware integrated")
 except ImportError as e:
     logger.warning("⚠️ Core middleware skipped: %s", e)
+
+# Rate limit middleware (pure ASGI to avoid BaseHTTPMiddleware issues)
+from clincore.core.rate_limit import check_and_increment
+from clincore.core.db import AsyncSessionLocal
+from sqlalchemy import text
+
+class RateLimitMiddleware:
+    """Rate limiting middleware using PostgreSQL counters (pure ASGI)."""
+    
+    def __init__(self, app):
+        self.app = app
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        
+        from starlette.requests import Request
+        from starlette.responses import JSONResponse
+        
+        request = Request(scope, receive)
+        path = request.url.path
+        
+        # Skip rate limiting for static files, docs, health checks
+        if path.startswith("/static") or path.startswith("/panel") or path in ("/health", "/version", "/docs", "/redoc", "/openapi.json"):
+            await self.app(scope, receive, send)
+            return
+        
+        # Skip for super-admin and auth endpoints
+        if path.startswith("/super-admin") or path.startswith("/auth") or path.startswith("/shop") or path.startswith("/store"):
+            await self.app(scope, receive, send)
+            return
+        
+        # Get tenant_id from header
+        tenant_id = request.headers.get("X-Tenant-Id", "").strip()
+        
+        # Skip if no tenant_id (will be caught by TenantMiddleware)
+        if not tenant_id:
+            await self.app(scope, receive, send)
+            return
+        
+        # Check and increment rate limit
+        try:
+            async with AsyncSessionLocal() as session:
+                allowed, current, limit = await check_and_increment(session, tenant_id, path)
+                await session.commit()
+                
+                if not allowed:
+                    response = JSONResponse(
+                        status_code=429,
+                        content={"detail": "rate limit exceeded"}
+                    )
+                    await response(scope, receive, send)
+                    return
+        except Exception as e:
+            logger.error(f"Rate limit check failed: {e}")
+            # Fail open - allow request if rate limit check fails
+        
+        # Process request
+        await self.app(scope, receive, send)
+
+app.add_middleware(RateLimitMiddleware)
 
 # Tenant validation middleware (class-based to run before route matching)
 class TenantMiddleware:
@@ -241,19 +301,23 @@ except ImportError as e:
 
 # Shop Product router (public read, admin write)
 try:
-    from clincore.clinical.shop_product_router import router as shop_router
-    app.include_router(shop_router)
+    from clincore.clinical.shop_product_router import router as shop_product_router
+    from clincore.shop.orders_router import router as shop_orders_router
+    from clincore.shop.shop_router import router as shop_pages_router
+    app.include_router(shop_product_router)
+    app.include_router(shop_orders_router)
+    app.include_router(shop_pages_router)
     logger.info("✅ Shop integrated")
 except ImportError as e:
     logger.warning("⚠️ Shop skipped: %s", e)
 
-# Super Admin router (optional)
+# Super Admin API router (general tenant/api-key management)
 try:
-    from clincore.api.super_admin import router as super_admin_router
-    app.include_router(super_admin_router)
-    logger.info("✅ Super Admin integrated")
+    from clincore.api.super_admin import router as super_admin_api_router
+    app.include_router(super_admin_api_router)
+    logger.info("✅ Super Admin API integrated")
 except ImportError as e:
-    logger.warning("⚠️ Super Admin skipped: %s", e)
+    logger.warning("⚠️ Super Admin API skipped: %s", e)
 
 # Encounters router (optional)
 try:
@@ -317,3 +381,5 @@ async def shutdown_event():
 _frontend = r'D:\clincore-platform\frontend'
 if os.path.isdir(_frontend):
     app.mount('/store', StaticFiles(directory=_frontend, html=True), name='shop')
+
+

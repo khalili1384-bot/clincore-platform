@@ -8,16 +8,16 @@ SUPER_ADMIN_KEY = os.getenv("SUPER_ADMIN_KEY", settings.SUPER_ADMIN_KEY)
 
 
 @pytest.mark.asyncio
-async def test_super_admin_no_key(async_client):
+async def test_super_admin_no_key(test_client):
     """GET /super-admin/tenants without header → expect 401"""
-    response = await async_client.get("/super-admin/tenants")
+    response = await test_client.get("/super-admin/tenants")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_super_admin_wrong_key(async_client):
+async def test_super_admin_wrong_key(test_client):
     """GET /super-admin/tenants with wrong key → expect 401"""
-    response = await async_client.get(
+    response = await test_client.get(
         "/super-admin/tenants",
         headers={"X-Super-Admin-Key": "wrong-key-12345"}
     )
@@ -25,9 +25,9 @@ async def test_super_admin_wrong_key(async_client):
 
 
 @pytest.mark.asyncio
-async def test_super_admin_list_tenants(async_client):
+async def test_super_admin_list_tenants(test_client):
     """GET /super-admin/tenants with correct X-Super-Admin-Key → expect 200 + list"""
-    response = await async_client.get(
+    response = await test_client.get(
         "/super-admin/tenants",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -41,9 +41,9 @@ async def test_super_admin_list_tenants(async_client):
 
 
 @pytest.mark.asyncio
-async def test_super_admin_list_api_keys(async_client):
+async def test_super_admin_list_api_keys(test_client):
     """GET /super-admin/api-keys with correct key → expect 200 + list"""
-    response = await async_client.get(
+    response = await test_client.get(
         "/super-admin/api-keys",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -63,9 +63,9 @@ async def test_super_admin_list_api_keys(async_client):
 
 
 @pytest.mark.asyncio
-async def test_super_admin_tenant_usage(async_client):
+async def test_super_admin_tenant_usage(test_client):
     """GET /super-admin/tenants/{DOCTOR_TENANT_ID}/usage → expect 200"""
-    response = await async_client.get(
+    response = await test_client.get(
         f"/super-admin/tenants/{DOCTOR_TENANT_ID}/usage",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -79,10 +79,10 @@ async def test_super_admin_tenant_usage(async_client):
 
 
 @pytest.mark.asyncio
-async def test_super_admin_deactivate_reactivate(async_client):
+async def test_super_admin_deactivate_reactivate(test_client):
     """Deactivate API key, check False, reactivate, check True"""
     # First, list API keys to find one
-    response = await async_client.get(
+    response = await test_client.get(
         "/super-admin/api-keys",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -96,7 +96,7 @@ async def test_super_admin_deactivate_reactivate(async_client):
     api_key_id = data["api_keys"][0]["id"]
     
     # Deactivate
-    response = await async_client.post(
+    response = await test_client.post(
         f"/super-admin/api-keys/{api_key_id}/deactivate",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -106,7 +106,7 @@ async def test_super_admin_deactivate_reactivate(async_client):
     assert data["is_active"] == False
     
     # Verify deactivated
-    response = await async_client.get(
+    response = await test_client.get(
         "/super-admin/api-keys",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -117,7 +117,7 @@ async def test_super_admin_deactivate_reactivate(async_client):
     assert key["is_active"] == False
     
     # Reactivate
-    response = await async_client.post(
+    response = await test_client.post(
         f"/super-admin/api-keys/{api_key_id}/activate",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )
@@ -127,7 +127,7 @@ async def test_super_admin_deactivate_reactivate(async_client):
     assert data["is_active"] == True
     
     # Verify reactivated
-    response = await async_client.get(
+    response = await test_client.get(
         "/super-admin/api-keys",
         headers={"X-Super-Admin-Key": SUPER_ADMIN_KEY}
     )

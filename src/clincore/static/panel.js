@@ -280,7 +280,8 @@ function renderPatientTable(patients) {
         return;
     }
     if (emptyEl) emptyEl.style.display = "none";
-    patients.forEach(function(p) {
+    patients.forEach(function(p, idx) {
+        p._seq = idx + 1;
         const tr = document.createElement("tr");
         ["patient_no", "full_name", "national_id", "phone"].forEach(function(field) {
             const td = document.createElement("td");
@@ -300,8 +301,17 @@ function renderPatientTable(patients) {
 
 function prefillEncounter(patient) {
     navigateTo("new-encounter");
-    const pidField = document.querySelector("#form-new-encounter [name='patient_id']");
-    if (pidField) pidField.value = safeText(patient.id);
+    // UUID → hidden field for API
+    const uuidField = document.getElementById("encounter-pid-uuid");
+    if (uuidField) uuidField.value = safeText(patient.id);
+    // Display ID → visible read-only field
+    const displayField = document.getElementById("encounter-pid-display");
+    if (displayField) {
+        const serial = patient.serial_number || patient.display_id || patient._seq || null;
+        displayField.value = serial
+            ? "P-" + String(serial).padStart(4, "0")
+            : safeText(patient.id);
+    }
     const nameDisplay = el("encounter-patient-name");
     if (nameDisplay) nameDisplay.textContent = safeText(patient.full_name || patient.id);
     // ذخیره برای استفاده در MCARE و نسخه

@@ -1,0 +1,10 @@
+﻿import pathlib, re
+hp = pathlib.Path(r'D:\clincore-platform\src\clincore\templates\shop\index.html')
+html = hp.read_text(encoding='utf-8')
+print('HAS_openProdDetail:', 'openProdDetail' in html)
+print('HAS_prodDetailModal:', 'prodDetailModal' in html)
+print('HAS_window.products:', 'window.products' in html)
+m = re.search(r'(products\s*=\s*[\w.]+\.products[\s\S]{0,80})', html)
+if m: print('PRODUCTS_LINE:', m.group(0)[:100])
+m2 = re.search(r'card-desc[\s\S]{0,200}', html)
+if m2: print('CARD_DESC:', m2.group(0)[:200])

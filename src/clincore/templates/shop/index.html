@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فروشگاه کلینیک</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--teal:#01696f;--teal-dark:#0c4e54;--teal-light:#cedcd8;--bg:#f7f6f2;--surface:#fff;--text:#28251d;--muted:#7a7974;--border:#dcd9d5;--red:#a12c7b;--radius:10px}
+body{font-family:"Vazirmatn",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;border:none;font-family:inherit}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.header-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:64px}
+.logo{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:1.2rem;color:var(--teal)}
+.logo svg{width:36px;height:36px}
+.search-wrap{flex:1;max-width:480px}
+.search-wrap input{width:100%;padding:.6rem 1rem;border:1px solid var(--border);border-radius:50px;font-family:inherit;font-size:.9rem;outline:none;transition:.2s}
+.search-wrap input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-light)}
+.header-actions{display:flex;align-items:center;gap:.75rem;margin-right:auto}
+.cart-btn{position:relative;background:var(--teal);color:#fff;border-radius:50px;padding:.5rem 1.2rem;font-size:.9rem;display:flex;align-items:center;gap:.5rem;font-family:inherit;transition:.2s}
+.cart-btn:hover{background:var(--teal-dark)}
+.cart-count{background:#fff;color:var(--teal);border-radius:50%;width:20px;height:20px;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.admin-link{font-size:.8rem;color:var(--muted);padding:.4rem .8rem;border:1px solid var(--border);border-radius:50px;transition:.2s}
+.admin-link:hover{border-color:var(--teal);color:var(--teal)}
+
+.cat-bar{background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+.cat-inner{max-width:1200px;margin:0 auto;padding:0 1.5rem;display:flex;gap:.5rem;padding-block:.75rem}
+.cat-btn{white-space:nowrap;padding:.4rem 1rem;border-radius:50px;font-family:inherit;font-size:.85rem;background:transparent;border:1px solid var(--border);color:var(--muted);transition:.2s}
+.cat-btn:hover,.cat-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+.main{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
+.section-title{font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;color:var(--text)}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.25rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:.2s;display:flex;flex-direction:column}
+.card:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-2px)}
+.card-body{padding:1rem;flex:1;display:flex;flex-direction:column;gap:.5rem}
+.card-cat{font-size:.72rem;color:var(--teal);background:var(--teal-light);padding:.2rem .6rem;border-radius:50px;display:inline-block;width:fit-content}
+.card-name{font-weight:700;font-size:.95rem;line-height:1.4}
+.card-desc{font-size:.8rem;color:var(--muted);line-height:1.5;flex:1}
+.card-footer{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.card-price{font-weight:800;font-size:1rem;color:var(--teal)}
+.card-price span{font-size:.7rem;font-weight:400;color:var(--muted)}
+.card-stock-badge{font-size:.72rem;padding:.2rem .6rem;border-radius:50px}
+.badge-ok{background:#d4dfcc;color:#437a22}
+.badge-low{background:#e7d7c4;color:#da7101}
+.badge-out{background:#e0ced7;color:var(--red)}
+.add-btn{background:var(--teal);color:#fff;border-radius:50px;padding:.45rem 1rem;font-size:.82rem;font-family:inherit;transition:.2s;white-space:nowrap}
+.add-btn:hover:not(:disabled){background:var(--teal-dark)}
+.add-btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed}
+
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.empty svg{width:64px;height:64px;margin-bottom:1rem;opacity:.3}
+
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;opacity:0;pointer-events:none;transition:.3s}
+.cart-overlay.open{opacity:1;pointer-events:all}
+.cart-drawer{position:fixed;top:0;right:-420px;width:420px;max-width:100vw;height:100vh;background:var(--surface);z-index:201;transition:.3s;display:flex;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,.15)}
+.cart-drawer.open{right:0}
+.cart-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cart-header h2{font-size:1.1rem;font-weight:700}
+.close-btn{background:none;font-size:1.4rem;color:var(--muted);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:.2s}
+.close-btn:hover{background:var(--bg);color:var(--text)}
+.cart-items{flex:1;overflow-y:auto;padding:1rem 1.5rem;display:flex;flex-direction:column;gap:.75rem}
+.cart-empty{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.9rem}
+.cart-item{display:flex;align-items:center;gap:.75rem;padding:.75rem;background:var(--bg);border-radius:8px}
+.cart-item-info{flex:1}
+.cart-item-name{font-weight:600;font-size:.88rem}
+.cart-item-price{font-size:.8rem;color:var(--muted);margin-top:.2rem}
+.qty-ctrl{display:flex;align-items:center;gap:.5rem}
+.qty-ctrl button{width:28px;height:28px;border-radius:8px;background:var(--surface);border:1px solid var(--border);font-size:1rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+.qty-ctrl button:hover{border-color:var(--teal);color:var(--teal)}
+.qty-ctrl span{min-width:24px;text-align:center;font-weight:700;font-size:.9rem}
+.remove-btn{color:var(--muted);font-size:1.1rem;background:none;transition:.2s;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+.remove-btn:hover{background:#e0ced7;color:var(--red)}
+.cart-footer{padding:1.25rem 1.5rem;border-top:1px solid var(--border)}
+.cart-total{display:flex;justify-content:space-between;font-weight:700;margin-bottom:1rem;font-size:1rem}
+.checkout-btn{width:100%;background:var(--teal);color:#fff;border-radius:50px;padding:.75rem;font-size:1rem;font-weight:700;font-family:inherit;transition:.2s}
+.checkout-btn:hover{background:var(--teal-dark)}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:.3s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;transform:scale(.95);transition:.3s}
+.modal-overlay.open .modal{transform:scale(1)}
+.modal-header{padding:1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:1.1rem;font-weight:700}
+.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:.4rem}
+.form-group label{font-size:.85rem;font-weight:600;color:var(--text)}
+.form-group label span{color:var(--muted);font-weight:400;font-size:.78rem;margin-right:.3rem}
+.form-group input,.form-group textarea,.form-group select{padding:.65rem .9rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.9rem;outline:none;transition:.2s;background:var(--bg);width:100%}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-light);background:#fff}
+.form-group textarea{resize:vertical;min-height:70px}
+.order-summary{background:var(--bg);border-radius:8px;padding:1rem;font-size:.85rem}
+.order-summary-row{display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)}
+.order-summary-row:last-child{border:none;font-weight:700;font-size:.95rem;padding-top:.6rem}
+.modal-footer{padding:1.25rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem}
+.btn-primary{flex:1;background:var(--teal);color:#fff;border-radius:50px;padding:.7rem;font-size:.95rem;font-weight:700;font-family:inherit;transition:.2s}
+.btn-primary:hover{background:var(--teal-dark)}
+.btn-secondary{background:var(--bg);color:var(--text);border-radius:50px;padding:.7rem 1.2rem;font-size:.95rem;font-family:inherit;border:1px solid var(--border);transition:.2s}
+.btn-secondary:hover{border-color:var(--teal);color:var(--teal)}
+
+.success-box{text-align:center;padding:2rem 1.5rem}
+.success-icon{width:64px;height:64px;background:var(--teal-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:2rem}
+.success-box h2{font-size:1.2rem;font-weight:800;color:var(--teal);margin-bottom:.5rem}
+.success-box p{color:var(--muted);font-size:.9rem;margin-bottom:1.5rem}
+.order-no-badge{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.5rem 1.5rem;font-weight:800;font-size:1.3rem;color:var(--teal);margin-bottom:1.5rem}
+.card-info{background:#e8f4f5;border:1px solid var(--teal-light);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:.9rem}
+.card-info strong{display:block;font-size:1rem;letter-spacing:.1em;margin:.4rem 0;color:var(--text)}
+.card-info small{color:var(--muted)}
+
+.admin-section{display:none}
+.admin-section.visible{display:block}
+.admin-bar{background:var(--teal-dark);color:#fff;padding:1rem 1.5rem;border-radius:10px;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem}
+.admin-bar h3{font-size:1rem}
+.status-select{padding:.3rem .6rem;border-radius:6px;font-family:inherit;font-size:.82rem;border:none;outline:none}
+table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+th,td{padding:.75rem 1rem;text-align:right;font-size:.85rem;border-bottom:1px solid var(--border)}
+th{background:var(--bg);font-weight:700;color:var(--muted)}
+tr:last-child td{border:none}
+.status-pill{padding:.25rem .7rem;border-radius:50px;font-size:.75rem;font-weight:600}
+.s-pending{background:#e7d7c4;color:#da7101}
+.s-confirmed{background:#d4dfcc;color:#437a22}
+.s-processing{background:#c6d8e4;color:#006494}
+.s-shipped{background:#c6d8e4;color:#275f8e}
+.s-delivered{background:#d4dfcc;color:#2e5c10}
+.s-cancelled{background:#e0ced7;color:var(--red)}
+.export-btn{background:#fff;color:var(--teal-dark);border:1px solid #fff;border-radius:50px;padding:.4rem 1rem;font-size:.82rem;font-family:inherit;transition:.2s;cursor:pointer}
+.export-btn:hover{background:var(--teal-light)}
+.loader{text-align:center;padding:3rem;color:var(--muted)}
+.items-detail{font-size:.78rem;color:var(--muted);margin-top:.3rem}
+.order-row-expand{cursor:pointer}
+.order-row-expand:hover td{background:rgba(1,105,111,.04)}
+
+@media(max-width:768px){
+.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem}
+.cart-drawer{width:100vw;right:-100vw}
+.header-inner{padding:0 1rem}
+.main{padding:1.5rem 1rem}
+table{font-size:.78rem}
+th,td{padding:.5rem .6rem}
+}
+.more-link{color:var(--teal);font-size:.75rem;cursor:pointer;background:none;border:none;font-family:inherit;padding:0;display:inline;text-decoration:underline dotted}.more-link:hover{color:var(--teal-dark)}.prod-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:.25s}.prod-overlay.open{opacity:1;pointer-events:all}.prod-box{background:var(--surface);border-radius:16px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;transform:translateY(12px);transition:.25s;display:flex;flex-direction:column}.prod-overlay.open .prod-box{transform:translateY(0)}.prod-head{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.prod-head h2{font-size:1.05rem;font-weight:700;line-height:1.4}.prod-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem;flex:1}.prod-row{display:flex;gap:.5rem;font-size:.85rem}.prod-row strong{color:var(--muted);min-width:80px;flex-shrink:0}.prod-desc-full{font-size:.88rem;color:var(--text);line-height:1.85;white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:1rem}.prod-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem}</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="/shop" class="logo">
+      <svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="10" fill="#01696f"/><path d="M18 8v20M8 18h20" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="18" cy="18" r="6" stroke="#fff" stroke-width="2"/></svg>
+      فروشگاه کلینیک
+    </a>
+    <div class="search-wrap">
+      <input type="search" id="searchInput" placeholder="جستجوی دارو یا محصول..." autocomplete="off">
+    </div>
+    <div class="header-actions">
+      <button class="cart-btn" onclick="openCart()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        سبد خرید
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+      <a href="#" class="admin-link" onclick="showAdmin(event)">پنل ادمین</a>
+    </div>
+  </div>
+</header>
+
+<div class="cat-bar">
+  <div class="cat-inner" id="catBar">
+    <button class="cat-btn active" onclick="filterCat(this,'')">همه</button>
+  </div>
+</div>
+
+<main class="main">
+  <div id="shopSection">
+    <p class="section-title" id="sectionTitle">محصولات</p>
+    <div class="products-grid" id="productsGrid">
+      <div class="loader">در حال بارگذاری...</div>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSection">
+    <div class="admin-bar">
+      <h3>مدیریت سفارشات</h3>
+      <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+        <select class="status-select" id="adminStatusFilter" onchange="loadOrders()">
+          <option value="">همه وضعیت‌ها</option>
+          <option value="pending_payment">در انتظار پرداخت</option>
+          <option value="confirmed">تایید شده</option>
+          <option value="processing">در حال پردازش</option>
+          <option value="shipped">ارسال شده</option>
+          <option value="delivered">تحویل داده شده</option>
+          <option value="cancelled">لغو شده</option>
+        </select>
+        <button class="export-btn" onclick="exportMahak()">خروجی محک CSV</button>
+      </div>
+    </div>
+    <div id="ordersTable"><div class="loader">در حال بارگذاری...</div></div>
+  </div>
+</main>
+
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-header">
+    <h2>سبد خرید</h2>
+    <button class="close-btn" onclick="closeCart()">×</button>
+  </div>
+  <div class="cart-items" id="cartItems">
+    <div class="cart-empty">سبد خرید خالی است</div>
+  </div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      <span>جمع کل:</span>
+      <span id="cartTotal">۰ تومان</span>
+    </div>
+    <button class="checkout-btn" onclick="openCheckout()">ادامه و خرید</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>اطلاعات خرید</h2>
+      <button class="close-btn" onclick="closeCheckout()">×</button>
+    </div>
+    <div class="modal-body" id="checkoutBody">
+      <div class="form-group">
+        <label>نام و نام‌خانوادگی <span>(الزامی)</span></label>
+        <input type="text" id="f_name" placeholder="علی احمدی">
+      </div>
+      <div class="form-group">
+        <label>شماره موبایل <span>(الزامی)</span></label>
+        <input type="tel" id="f_phone" placeholder="09..." maxlength="11">
+      </div>
+      <div class="form-group">
+        <label>آدرس تحویل <span>(الزامی)</span></label>
+        <textarea id="f_address" placeholder="استان، شهر، خیابان..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>شماره بیمار <span>(اختیاری)</span></label>
+        <input type="text" id="f_patient_no" placeholder="P-0001">
+      </div>
+      <div class="form-group">
+        <label>توضیحات <span>(اختیاری)</span></label>
+        <input type="text" id="f_notes" placeholder="توضیحات سفارش">
+      </div>
+      <div class="order-summary" id="orderSummary"></div>
+      <div class="card-info">
+        <small>روش پرداخت: <strong>کارت به کارت</strong></small><br>
+        <small>پس از ثبت سفارش، شماره کارت نمایش داده می‌شود.</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeCheckout()">بازگشت</button>
+      <button class="btn-primary" id="submitBtn" onclick="submitOrder()">ثبت سفارش</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="success-box">
+      <div class="success-icon">✓</div>
+      <h2>سفارش ثبت شد!</h2>
+      <p>شماره سفارش شما:</p>
+      <div class="order-no-badge" id="successOrderNo">ORD-0001</div>
+      <div class="card-info" id="cardInfoBox">
+        <small>لطفاً مبلغ زیر را به شماره کارت واریز کنید:</small>
+        <strong id="cardNumber">—</strong>
+        <small>مبلغ: <strong id="successTotal"></strong> تومان</small><br>
+        <small>پس از واریز، رسید را از طریق موبایل ارسال نمایید.</small>
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:1rem" onclick="location.reload()">بازگشت به فروشگاه</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "";
+let allProducts = [];
+let cart = [];
+let currentCat = "";
+let adminKey = "";
+
+const urlParams = new URLSearchParams(location.search);
+const prePatientNo = urlParams.get("patient_no") || "";
+
+async function init() {
+    await loadCategories();
+    await loadProducts();
+    if (prePatientNo) document.getElementById("f_patient_no").value = prePatientNo;
+}
+
+async function loadCategories() {
+    try {
+        const res = await fetch(`${API}/shop/products/categories`);
+        const data = await res.json();
+        const bar = document.getElementById("catBar");
+        (data.categories || []).forEach(c => {
+            const btn = document.createElement("button");
+            btn.className = "cat-btn";
+            btn.textContent = `${c.name} (${c.count})`;
+            btn.onclick = () => filterCat(btn, c.name);
+            bar.appendChild(btn);
+        });
+    } catch(e) { console.error("loadCategories", e); }
+}
+
+async function loadProducts(cat = "", search = "") {
+    const grid = document.getElementById("productsGrid");
+    grid.innerHTML = `<div class="loader">در حال بارگذاری...</div>`;
+    let url = `${API}/shop/products?page_size=100`;
+    if (cat) url += `&category=${encodeURIComponent(cat)}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        allProducts = data.products || [];
+        renderProducts(allProducts);
+        document.getElementById("sectionTitle").textContent = `${allProducts.length} محصول`;
+    } catch(e) {
+        grid.innerHTML = `<div class="loader">خطا در بارگذاری</div>`;
+    }
+}
+
+function renderProducts(products) {
+    const grid = document.getElementById("productsGrid");
+    if (!products.length) {
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
+            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            <p>محصولی یافت نشد</p></div>`;
+        return;
+    }
+    grid.innerHTML = products.map(p => {
+        const stock = p.stock_quantity ?? 99;
+        const threshold = p.stock_alert_threshold ?? 5;
+        const outOfStock = stock <= 0;
+        const lowStock = !outOfStock && stock <= threshold;
+        const badge = outOfStock
+            ? `<span class="card-stock-badge badge-out">ناموجود</span>`
+            : lowStock
+            ? `<span class="card-stock-badge badge-low">موجودی کم (${stock})</span>`
+            : `<span class="card-stock-badge badge-ok">موجود</span>`;
+        const price = p.price.toLocaleString("fa-IR");
+        const safeName = (p.name_fa || p.name).replace(/'/g, "\'").replace(/"/g, "&quot;");
+        return `<div class="card">
+            <div class="card-body">
+                <span class="card-cat">${p.category}</span>
+                <div class="card-name">${p.name_fa || p.name}</div>
+                ${p.description ? `<div class="card-desc">${p.description.slice(0,80)}${p.description.length>80?`... <span onclick="openProdDetail('${p.id}')" style="color:var(--primary,#0d9488);cursor:pointer;font-weight:600;font-size:.78rem">بیشتر ▾</span>`:""}</div>` : `<div style="height:.5rem"></div>`}
+            </div>
+            <div class="card-footer">
+                <div>
+                    <div class="card-price">${price} <span>تومان / ${p.unit}</span></div>
+                    ${badge}
+                </div>
+                <button class="add-btn" ${outOfStock ? "disabled" : ""}
+                    onclick="addToCart('${p.id}','${safeName}',${p.price},'${p.unit}',${stock})">
+                    ${outOfStock ? "ناموجود" : "افزودن"}
+                </button>
+            </div>
+        </div>`;
+    }).join("");
+}
+
+function filterCat(btn, cat) {
+    currentCat = cat;
+    document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    loadProducts(cat, document.getElementById("searchInput").value);
+}
+
+let searchTimer;
+document.getElementById("searchInput").addEventListener("input", e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadProducts(currentCat, e.target.value), 350);
+});
+
+function addToCart(id, name, price, unit, stock) {
+    const idx = cart.findIndex(i => i.id === id);
+    if (idx >= 0) { if (cart[idx].qty < stock) cart[idx].qty++; }
+    else { cart.push({id, name, price, unit, qty: 1, stock}); }
+    updateCartUI();
+    openCart();
+}
+
+function removeFromCart(id) {
+    cart = cart.filter(i => i.id !== id);
+    updateCartUI();
+}
+
+function changeQty(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+    item.qty = Math.max(1, Math.min(item.stock, item.qty + delta));
+    updateCartUI();
+}
+
+function updateCartUI() {
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    document.getElementById("cartCount").textContent = cart.reduce((s,i)=>s+i.qty,0);
+    document.getElementById("cartTotal").textContent = total.toLocaleString("fa-IR") + " تومان";
+    const el = document.getElementById("cartItems");
+    if (!cart.length) { el.innerHTML = `<div class="cart-empty">سبد خرید خالی است</div>`; return; }
+    el.innerHTML = cart.map(i => `
+        <div class="cart-item">
+            <div class="cart-item-info">
+                <div class="cart-item-name">${i.name}</div>
+                <div class="cart-item-price">${(i.price*i.qty).toLocaleString("fa-IR")} تومان (${i.price.toLocaleString("fa-IR")} × ${i.qty})</div>
+            </div>
+            <div class="qty-ctrl">
+                <button onclick="changeQty('${i.id}',-1)">−</button>
+                <span>${i.qty}</span>
+                <button onclick="changeQty('${i.id}',1)">+</button>
+            </div>
+            <button class="remove-btn" onclick="removeFromCart('${i.id}')">×</button>
+        </div>
+    `).join("");
+}
+
+function openCart() {
+    document.getElementById("cartOverlay").classList.add("open");
+    document.getElementById("cartDrawer").classList.add("open");
+}
+function closeCart() {
+    document.getElementById("cartOverlay").classList.remove("open");
+    document.getElementById("cartDrawer").classList.remove("open");
+}
+
+function openCheckout() {
+    if (!cart.length) return;
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    document.getElementById("orderSummary").innerHTML =
+        cart.map(i => `<div class="order-summary-row"><span>${i.name}</span><span>${i.qty} × ${i.price.toLocaleString("fa-IR")}</span></div>`).join("") +
+        `<div class="order-summary-row"><span>جمع کل</span><span>${total.toLocaleString("fa-IR")} تومان</span></div>`;
+    if (prePatientNo) document.getElementById("f_patient_no").value = prePatientNo;
+    closeCart();
+    document.getElementById("checkoutModal").classList.add("open");
+}
+function closeCheckout() {
+    document.getElementById("checkoutModal").classList.remove("open");
+}
+
+async function submitOrder() {
+    const name = document.getElementById("f_name").value.trim();
+    const phone = document.getElementById("f_phone").value.trim();
+    const address = document.getElementById("f_address").value.trim();
+    const patient_no = document.getElementById("f_patient_no").value.trim();
+    const notes = document.getElementById("f_notes").value.trim();
+    if (!name || !phone || !address) { alert("لطفاً نام، موبایل و آدرس را وارد کنید"); return; }
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "در حال ثبت...";
+    try {
+        const res = await fetch(`${API}/shop/orders`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                customer_name: name, customer_phone: phone, customer_address: address,
+                patient_no: patient_no || null, notes: notes || null,
+                items: cart.map(i => ({product_id: i.id, quantity: i.qty}))
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.detail || "خطا در ثبت سفارش"); return; }
+        closeCheckout();
+        document.getElementById("successOrderNo").textContent = data.order_no;
+        document.getElementById("cardNumber").textContent = data.card_number || "—";
+        document.getElementById("successTotal").textContent = (data.total_amount||0).toLocaleString("fa-IR");
+        if (!data.card_number) document.getElementById("cardInfoBox").style.display = "none";
+        document.getElementById("successModal").classList.add("open");
+        cart = [];
+        updateCartUI();
+    } catch(e) {
+        alert("خطا در اتصال به سرور");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "ثبت سفارش";
+    }
+}
+
+async function showAdmin(e) {
+    e.preventDefault();
+    const key = prompt("کلید ادمین:");
+    if (!key) return;
+    adminKey = key;
+    document.getElementById("shopSection").style.display = "none";
+    document.getElementById("adminSection").classList.add("visible");
+    await loadOrders();
+}
+
+async function loadOrders() {
+    const status = document.getElementById("adminStatusFilter").value;
+    let url = `${API}/shop/orders?page_size=100`;
+    if (status) url += `&status=${status}`;
+    try {
+        const res = await fetch(url, {headers: {"X-Super-Admin-Key": adminKey}});
+        const data = await res.json();
+        if (!res.ok) { document.getElementById("ordersTable").innerHTML = `<p style="color:red;padding:1rem">خطا: ${data.detail || "دسترسی رد شد"}</p>`; return; }
+        renderOrders(data.orders || []);
+    } catch(e) {
+        document.getElementById("ordersTable").innerHTML = `<p style="color:red;padding:1rem">خطا در اتصال</p>`;
+    }
+}
+
+const statusLabels = {pending_payment:"در انتظار پرداخت",confirmed:"تایید شده",processing:"در حال پردازش",shipped:"ارسال شده",delivered:"تحویل داده شده",cancelled:"لغو شده"};
+const statusClass = {pending_payment:"s-pending",confirmed:"s-confirmed",processing:"s-processing",shipped:"s-shipped",delivered:"s-delivered",cancelled:"s-cancelled"};
+
+function renderOrders(orders) {
+    if (!orders.length) {
+        document.getElementById("ordersTable").innerHTML = `<div class="loader">سفارشی یافت نشد</div>`;
+        return;
+    }
+    document.getElementById("ordersTable").innerHTML = `<table>
+        <thead><tr>
+            <th>شماره</th><th>نام</th><th>موبایل</th>
+            <th>آدرس</th><th>اقلام</th><th>مبلغ (ت)</th>
+            <th>وضعیت</th><th>تاریخ</th><th>عملیات</th>
+        </tr></thead>
+        <tbody>${orders.map(o => {
+            const items = Array.isArray(o.items) ? o.items : [];
+            const itemsStr = items.map(i => `${i.name_fa||""} ×${i.quantity}`).join("، ");
+            return `<tr>
+                <td><strong>${o.order_no}</strong>${o.patient_no ? `<br><small style="color:var(--teal)">${o.patient_no}</small>` : ""}</td>
+                <td>${o.customer_name}</td>
+                <td dir="ltr">${o.customer_phone}</td>
+                <td style="max-width:160px;font-size:.78rem">${o.customer_address||""}</td>
+                <td style="max-width:180px;font-size:.78rem">${itemsStr}</td>
+                <td><strong>${(o.total_amount||0).toLocaleString("fa-IR")}</strong></td>
+                <td><span class="status-pill ${statusClass[o.status]||""}">${statusLabels[o.status]||o.status}</span></td>
+                <td style="font-size:.78rem">${o.created_at ? o.created_at.slice(0,10) : ""}</td>
+                <td>
+                    <select class="status-select" onchange="updateStatus('${o.id}',this.value)">
+                        ${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}" ${o.status===v?"selected":""}>${l}</option>`).join("")}
+                    </select>
+                </td>
+            </tr>`;
+        }).join("")}</tbody></table>`;
+}
+
+async function updateStatus(orderId, newStatus) {
+    const res = await fetch(`${API}/shop/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json", "X-Super-Admin-Key": adminKey},
+        body: JSON.stringify({status: newStatus})
+    });
+    if (res.ok) { await loadOrders(); }
+    else { alert("خطا در بروزرسانی وضعیت"); await loadOrders(); }
+}
+
+async function exportMahak() {
+    const from = prompt("از تاریخ (YYYY-MM-DD) — خالی برای همه:");
+    const to = prompt("تا تاریخ (YYYY-MM-DD) — خالی برای همه:");
+    let url = `${API}/shop/export/mahak?`;
+    if (from) url += `from_date=${encodeURIComponent(from)}&`;
+    if (to) url += `to_date=${encodeURIComponent(to)}`;
+    try {
+        const res = await fetch(url, {headers: {"X-Super-Admin-Key": adminKey}});
+        if (!res.ok) { alert("خطا در دریافت خروجی"); return; }
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "mahak_export.csv";
+        a.click();
+    } catch(e) { alert("خطا در اتصال"); }
+}
+
+init();
+
+function openProd(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById("pm-name").textContent = p.name_fa || p.name;
+    document.getElementById("pm-cat").textContent = p.category || "—";
+    document.getElementById("pm-price").textContent = p.price.toLocaleString("fa-IR") + " تومان / " + p.unit;
+    document.getElementById("pm-stock").textContent = (p.stock_quantity ?? 99) > 0 ? "موجود" : "ناموجود";
+    const descWrap = document.getElementById("pm-desc-wrap");
+    const descEl = document.getElementById("pm-desc");
+    if (p.description && p.description.trim()) {
+        descWrap.style.display = "block";
+        descEl.textContent = p.description;
+    } else {
+        descWrap.style.display = "none";
+    }
+    const addBtn = document.getElementById("pm-add");
+    addBtn.onclick = () => pmAdd(id);
+    if ((p.stock_quantity ?? 99) <= 0) {
+        addBtn.disabled = true;
+        addBtn.textContent = "ناموجود";
+    } else {
+        addBtn.disabled = false;
+        addBtn.textContent = "افزودن به سبد";
+    }
+    document.getElementById("prodOverlay").classList.add("open");
+}
+
+function closeProd(e) {
+    if (e && e.target !== document.getElementById("prodOverlay")) return;
+    document.getElementById("prodOverlay").classList.remove("open");
+}
+
+function pmAdd(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    const safeName = (p.name_fa || p.name).replace(/'/g, "\\'");
+    addToCart(p.id, safeName, p.price, p.unit, p.stock_quantity ?? 99);
+    closeProd();
+}
+
+function openProdDetail(id){openProd(id);}
+
+</script>
+
+<div id="prodDetailModal" onclick="if(event.target===this)closeProdDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--surface,#fff);border-radius:16px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border,#e5e7eb);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div id="pd-name" style="font-size:1.1rem;font-weight:700;"></div>
+        <div id="pd-cat" style="font-size:.8rem;color:var(--muted,#6b7280);margin-top:2px;"></div>
+      </div>
+      <button onclick="closeProdDetail()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted,#6b7280);line-height:1;"></button>
+    </div>
+    <div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div id="pd-price" style="font-size:1.2rem;font-weight:700;color:var(--primary,#0d9488);"></div>
+        <div id="pd-badge"></div>
+      </div>
+      <div id="pd-desc-wrap" style="display:none;">
+        <div style="font-size:.85rem;font-weight:600;color:var(--text,#111);margin-bottom:.5rem;padding-bottom:.4rem;border-bottom:1px solid var(--border,#e5e7eb);">📋 توضیحات محصول</div>
+        <div id="pd-desc" style="font-size:.9rem;line-height:1.9;color:var(--text,#374151);white-space:pre-line;"></div>
+      </div>
+      <div id="pd-noDesc" style="font-size:.85rem;color:var(--muted,#6b7280);display:none;">توضیحاتی برای این محصول ثبت نشده است.</div>
+      <button id="pd-addBtn" style="width:100%;padding:.75rem;border-radius:10px;border:none;background:var(--primary,#0d9488);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;">افزودن به سبد خرید</button>
+    </div>
+  </div>
+</div>
+
+<div class="prod-overlay" id="prodOverlay" onclick="closeProd(event)"><div class="prod-box"><div class="prod-head"><h2 id="pm-name"></h2><button class="close-btn" onclick="document.getElementById('prodOverlay').classList.remove('open')">&#x2715;</button></div><div class="prod-body"><div class="prod-row"><strong>دسته:</strong><span id="pm-cat"></span></div><div class="prod-row"><strong>قیمت:</strong><span id="pm-price"></span></div><div class="prod-row"><strong>موجودی:</strong><span id="pm-stock"></span></div><div id="pm-desc-wrap" style="display:none"><div style="font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:.5rem">توضیحات کامل</div><div class="prod-desc-full" id="pm-desc"></div></div></div><div class="prod-foot"><button class="btn-secondary" onclick="document.getElementById('prodOverlay').classList.remove('open')">بستن</button><button class="btn-primary" id="pm-add" onclick="pmAdd()">افزودن به سبد</button></div></div></div></body>
+</html>

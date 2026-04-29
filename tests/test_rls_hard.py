@@ -46,8 +46,8 @@ async def test_cross_tenant_cannot_see_data(real_tenant):
     async with tenant_session(str(tenant_a)) as s:
         await s.execute(
             text("""
-                INSERT INTO patients (id, tenant_id, full_name, created_at)
-                VALUES (gen_random_uuid(), :tid, 'Patient of A', now())
+                INSERT INTO patients (id, tenant_id, full_name, patient_no, created_at)
+                VALUES (gen_random_uuid(), :tid, 'Patient of A', 1, now())
             """),
             {"tid": str(tenant_a)},
         )
@@ -88,8 +88,8 @@ async def test_malicious_insert_blocked(real_tenant):
         with pytest.raises(Exception) as exc_info:
             await s.execute(
                 text("""
-                    INSERT INTO patients (id, tenant_id, full_name, created_at)
-                    VALUES (gen_random_uuid(), :fake_tid, 'Malicious Row', now())
+                    INSERT INTO patients (id, tenant_id, full_name, patient_no, created_at)
+                    VALUES (gen_random_uuid(), :fake_tid, 'Malicious Row', 999, now())
                 """),
                 {"fake_tid": str(fake_tid)},
             )

@@ -9,9 +9,11 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 db_url = os.environ["DATABASE_URL"].replace(
-    "postgresql+psycopg://", "postgresql+psycopg2://"
+    "postgresql+asyncpg://", "postgresql+psycopg://"
 ).replace(
-    "postgresql+psycopg_async://", "postgresql+psycopg2://"
+    "postgresql+psycopg://", "postgresql+psycopg://"
+).replace(
+    "postgresql+psycopg_async://", "postgresql+psycopg://"
 ).replace(
     "postgresql+psycopg2://", "postgresql+psycopg://"
 )

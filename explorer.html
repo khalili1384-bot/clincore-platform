@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مدیریت — ClinCore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#01696f;--teal-dark:#0c4e54;--teal-light:#e0f0f0;
+  --bg:#f5f6fa;--surface:#fff;--border:#e0e4ea;
+  --text:#1e2532;--muted:#6b7280;--danger:#c0392b;--success:#217a3c;
+  --warn:#b45309;--shadow:0 2px 8px rgba(0,0,0,.08);
+}
+body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+/* ─── Header ─── */
+header{background:var(--teal);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+header h1{font-size:17px;font-weight:700;letter-spacing:.3px}
+#auth-area{display:flex;align-items:center;gap:8px}
+#key-input{padding:6px 12px;border-radius:6px;border:none;font-family:inherit;font-size:13px;width:300px;direction:ltr}
+#btn-login{background:#fff;color:var(--teal-dark);border:none;padding:6px 16px;border-radius:6px;font-family:inherit;font-weight:600;cursor:pointer;font-size:13px}
+#btn-login:hover{background:#e0f0f0}
+#status-dot{width:10px;height:10px;border-radius:50%;background:#aaa;border:2px solid rgba(255,255,255,.4);display:inline-block}
+#status-dot.ok{background:#4ade80}
+/* ─── Tabs ─── */
+.tabs{display:flex;gap:0;background:#fff;border-bottom:2px solid var(--border);padding:0 24px}
+.tab{padding:12px 20px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;font-size:14px}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.tab:hover:not(.active){color:var(--text)}
+/* ─── Content ─── */
+.tab-content{display:none;padding:20px 24px}
+.tab-content.active{display:block}
+/* ─── Toolbar ─── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar input[type=search]{padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;width:220px}
+.toolbar select{padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-primary{background:var(--teal);color:#fff}.btn-primary:hover{background:var(--teal-dark)}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:5px}
+.btn-save{background:var(--teal);color:#fff}.btn-save:hover{background:var(--teal-dark)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#a93226}
+/* ─── Table ─── */
+.tbl-wrap{overflow-x:auto;border-radius:10px;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;background:var(--surface)}
+thead tr{background:var(--teal);color:#fff}
+th{padding:10px 12px;text-align:right;font-weight:600;font-size:13px;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+/* ─── Inline edit inputs ─── */
+.edit-input{width:80px;padding:4px 7px;border:1px solid #c5ccd8;border-radius:5px;font-family:inherit;font-size:13px;text-align:center}
+.edit-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(1,105,111,.15)}
+/* ─── Badges ─── */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.b-pending{background:#fef3c7;color:#92400e}
+.b-confirmed{background:#d1fae5;color:#065f46}
+.b-processing{background:#dbeafe;color:#1e40af}
+.b-shipped{background:#ede9fe;color:#4c1d95}
+.b-delivered{background:#ecfdf5;color:#064e3b}
+.b-cancelled{background:#fee2e2;color:#7f1d1d}
+.b-active{background:#dcfce7;color:#166534}
+.b-inactive{background:#fee2e2;color:#991b1b}
+/* ─── Toggle ─── */
+.toggle{position:relative;display:inline-block;width:36px;height:20px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:20px;transition:.3s}
+.toggle-slider:before{content:"";position:absolute;width:14px;height:14px;right:3px;top:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle input:checked+.toggle-slider{background:var(--teal)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(-16px)}
+/* ─── Status select ─── */
+.status-select{padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:12px;background:#fff}
+/* ─── Toast ─── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#1e2532;color:#fff;padding:10px 22px;border-radius:8px;font-size:13px;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.err{background:var(--danger)}
+#toast.ok{background:var(--success)}
+/* ─── Empty/Loading ─── */
+.empty-row td{text-align:center;color:var(--muted);padding:32px}
+.loading{text-align:center;color:var(--muted);padding:32px;font-size:13px}
+/* ─── Stats bar ─── */
+.stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 18px;min-width:120px;box-shadow:var(--shadow)}
+.stat-card .val{font-size:22px;font-weight:700;color:var(--teal)}
+.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛠 پنل مدیریت ClinCore</h1>
+  <div id="auth-area">
+    <span id="status-dot"></span>
+    <input id="key-input" type="password" placeholder="Super Admin Key را وارد کنید..." autocomplete="off">
+    <button id="btn-login" class="btn">ورود</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="products">📦 محصولات</div>
+  <div class="tab" data-tab="orders">🛍 سفارشات</div>
+</div>
+
+<!-- ─── PRODUCTS ─── -->
+<div id="tab-products" class="tab-content active">
+  <div class="stats">
+    <div class="stat-card"><div class="val" id="stat-total">—</div><div class="lbl">کل محصولات</div></div>
+    <div class="stat-card"><div class="val" id="stat-active">—</div><div class="lbl">فعال</div></div>
+    <div class="stat-card"><div class="val" id="stat-low">—</div><div class="lbl">کم‌موجودی</div></div>
+    <div class="stat-card"><div class="val" id="stat-out">—</div><div class="lbl">ناموجود</div></div>
+  </div>
+  <div class="toolbar">
+    <input type="search" id="prod-search" placeholder="جستجو در محصولات...">
+    <select id="prod-cat-filter"><option value="">همه دسته‌ها</option></select>
+    <button class="btn btn-primary btn-sm" id="btn-reload-products">🔄 بروزرسانی</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewProd()">➕ محصول جدید</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>نام فارسی</th><th>دسته</th><th>SKU</th>
+          <th>قیمت (ت)</th><th>موجودی</th><th>هشدار</th>
+          <th>وضعیت</th><th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody id="prod-tbody">
+        <tr class="empty-row"><td colspan="8">ابتدا با کلید ادمین وارد شوید</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── ORDERS ─── -->
+<div id="tab-orders" class="tab-content">
+  <div class="stats">
+    <div class="stat-card"><div class="val" id="ord-stat-total">—</div><div class="lbl">کل سفارشات</div></div>
+    <div class="stat-card"><div class="val" id="ord-stat-pending">—</div><div class="lbl">در انتظار پرداخت</div></div>
+    <div class="stat-card"><div class="val" id="ord-stat-confirmed">—</div><div class="lbl">تأیید شده</div></div>
+    <div class="stat-card"><div class="val" id="ord-stat-revenue">—</div><div class="lbl">جمع (تومان)</div></div>
+  </div>
+  <div class="toolbar">
+    <select id="ord-status-filter">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="pending_payment">در انتظار پرداخت</option>
+      <option value="confirmed">تأیید شده</option>
+      <option value="processing">در حال پردازش</option>
+      <option value="shipped">ارسال شده</option>
+      <option value="delivered">تحویل داده شده</option>
+      <option value="cancelled">لغو شده</option>
+    </select>
+    <button class="btn btn-primary btn-sm" id="btn-reload-orders">🔄 بروزرسانی</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>شماره</th><th>مشتری</th><th>موبایل</th>
+          <th>مبلغ (ت)</th><th>روش پرداخت</th>
+          <th>وضعیت</th><th>تاریخ</th><th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody id="ord-tbody">
+        <tr class="empty-row"><td colspan="8">ابتدا با کلید ادمین وارد شوید</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const BASE = '';
+let ADMIN_KEY = '';
+
+const STATUS_LABEL = {
+  pending_payment:'در انتظار پرداخت', confirmed:'تأیید شده',
+  processing:'در حال پردازش', shipped:'ارسال شده',
+  delivered:'تحویل داده شده', cancelled:'لغو شده'
+};
+const STATUS_CLASS = {
+  pending_payment:'b-pending', confirmed:'b-confirmed',
+  processing:'b-processing', shipped:'b-shipped',
+  delivered:'b-delivered', cancelled:'b-cancelled'
+};
+const STATUS_NEXT = ['pending_payment','confirmed','processing','shipped','delivered','cancelled'];
+const PAY_LABEL = {card_to_card:'کارت‌به‌کارت', cash:'نقدی', other:'سایر'};
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 2800);
+}
+
+function adminHeaders() {
+  return {'Content-Type':'application/json','X-Super-Admin-Key': ADMIN_KEY};
+}
+
+async function apiFetch(url, opts={}) {
+  opts.headers = Object.assign({}, adminHeaders(), opts.headers||{});
+  const r = await fetch(BASE + url, opts);
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j.detail || r.status);
+  }
+  return r.json();
+}
+
+// ─── Tabs ───
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab,.tab-content').forEach(x => x.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Auth ───
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('key-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogin() {
+  ADMIN_KEY = document.getElementById('key-input').value.trim();
+  if (!ADMIN_KEY) { toast('کلید را وارد کنید', 'err'); return; }
+  try {
+    await apiFetch('/shop/orders?page_size=1');
+    document.getElementById('status-dot').className = 'ok';
+    toast('ورود موفق ✓', 'ok');
+    loadProducts();
+    loadOrders();
+  } catch(e) {
+    document.getElementById('status-dot').className = '';
+    ADMIN_KEY = '';
+    toast('کلید نادرست: ' + e.message, 'err');
+  }
+}
+
+// ─── PRODUCTS ───
+let allProducts = [];
+let categories = [];
+
+async function loadProducts() {
+  const tbody = document.getElementById('prod-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">در حال بارگذاری...</td></tr>';
+  try {
+    const data = await apiFetch('/shop/products/admin-list');
+    allProducts = data.products || [];
+    // populate category filter
+    const cats = [...new Set(allProducts.map(p=>p.category))].sort();
+    categories = cats;
+    const sel = document.getElementById('prod-cat-filter');
+    sel.innerHTML = '<option value="">همه دسته‌ها</option>' +
+      cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    updateProductStats();
+    renderProducts();
+  } catch(e) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">خطا: ${e.message}</td></tr>`;
+    toast('خطا در بارگذاری محصولات: ' + e.message, 'err');
+  }
+}
+
+function updateProductStats() {
+  const total = allProducts.length;
+  const active = allProducts.filter(p=>p.is_active).length;
+  const low = allProducts.filter(p=>p.low_stock).length;
+  const out = allProducts.filter(p=>p.out_of_stock).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-low').textContent = low;
+  document.getElementById('stat-out').textContent = out;
+}
+
+function renderProducts() {
+  const q = document.getElementById('prod-search').value.trim().toLowerCase();
+  const cat = document.getElementById('prod-cat-filter').value;
+  const tbody = document.getElementById('prod-tbody');
+  let filtered = allProducts;
+  if (cat) filtered = filtered.filter(p=>p.category===cat);
+  if (q) filtered = filtered.filter(p=>
+    p.name_fa.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q));
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">محصولی یافت نشد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(p => {
+    const activeClass = p.is_active ? 'b-active' : 'b-inactive';
+    const activeLabel = p.is_active ? 'فعال' : 'غیرفعال';
+    return `<tr data-id="${p.id}">
+      <td><strong>${p.name_fa}</strong><br><small style="color:var(--muted)">${p.name||''}</small></td>
+      <td>${p.category}</td>
+      <td><code style="font-size:11px">${p.sku||'—'}</code></td>
+      <td><input class="edit-input" type="number" min="0" step="0.01" data-field="price" value="${p.price}" style="width:90px"></td>
+      <td><input class="edit-input" type="number" min="0" data-field="stock_quantity" value="${p.stock_quantity}"></td>
+      <td><input class="edit-input" type="number" min="0" data-field="stock_alert_threshold" value="${p.stock_alert_threshold}"></td>
+      <td>
+        <label class="toggle" title="${activeLabel}">
+          <input type="checkbox" data-field="is_active" ${p.is_active?'checked':''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td><button class="btn btn-save btn-sm" onclick="saveProduct('${p.id}', this)">💾 ذخیره</button><button class="btn btn-danger btn-sm" style="margin-right:4px" onclick="deleteProd('${p.id}',this)">🗑 حذف</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveProduct(id, btn) {
+  const row = btn.closest('tr');
+  const body = {};
+  row.querySelectorAll('[data-field]').forEach(el => {
+    const f = el.dataset.field;
+    if (el.type === 'checkbox') body[f] = el.checked;
+    else if (f === 'price') body[f] = parseFloat(el.value) || 0;
+    else body[f] = parseInt(el.value) || 0;
+  });
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    await apiFetch(`/shop/products/${id}`, {method:'PATCH', body: JSON.stringify(body)});
+    toast('محصول ذخیره شد ✓', 'ok');
+    // update local data
+    const p = allProducts.find(x=>x.id===id);
+    if (p) Object.assign(p, body);
+    updateProductStats();
+  } catch(e) {
+    toast('خطا: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 ذخیره';
+  }
+}
+
+document.getElementById('prod-search').addEventListener('input', renderProducts);
+document.getElementById('prod-cat-filter').addEventListener('change', renderProducts);
+document.getElementById('btn-reload-products').addEventListener('click', loadProducts);
+
+// ─── ORDERS ───
+let allOrders = [];
+
+async function loadOrders() {
+  const tbody = document.getElementById('ord-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">در حال بارگذاری...</td></tr>';
+  const statusFilter = document.getElementById('ord-status-filter').value;
+  const url = '/shop/orders' + (statusFilter ? `?status=${statusFilter}` : '');
+  try {
+    const data = await apiFetch(url);
+    allOrders = data.orders || [];
+    updateOrderStats();
+    renderOrders();
+  } catch(e) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">خطا: ${e.message}</td></tr>`;
+    toast('خطا در بارگذاری سفارشات: ' + e.message, 'err');
+  }
+}
+
+function updateOrderStats() {
+  const total = allOrders.length;
+  const pending = allOrders.filter(o=>o.status==='pending_payment').length;
+  const confirmed = allOrders.filter(o=>o.status==='confirmed').length;
+  const revenue = allOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total_amount,0);
+  document.getElementById('ord-stat-total').textContent = total;
+  document.getElementById('ord-stat-pending').textContent = pending;
+  document.getElementById('ord-stat-confirmed').textContent = confirmed;
+  document.getElementById('ord-stat-revenue').textContent = revenue.toLocaleString('fa-IR');
+}
+
+function renderOrders() {
+  const tbody = document.getElementById('ord-tbody');
+  if (!allOrders.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">سفارشی یافت نشد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allOrders.map(o => {
+    const dt = o.created_at ? new Date(o.created_at).toLocaleDateString('fa-IR') : '—';
+    const payLabel = PAY_LABEL[o.payment_method] || o.payment_method;
+    const statusBadge = `<span class="badge ${STATUS_CLASS[o.status]||''}">${STATUS_LABEL[o.status]||o.status}</span>`;
+    const statusOpts = STATUS_NEXT.map(s =>
+      `<option value="${s}" ${o.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`
+    ).join('');
+    return `<tr data-id="${o.id}">
+      <td><strong>${o.order_no}</strong></td>
+      <td>${o.customer_name}</td>
+      <td dir="ltr">${o.customer_phone}</td>
+      <td>${o.total_amount.toLocaleString('fa-IR')}</td>
+      <td>${payLabel}</td>
+      <td>
+        <select class="status-select" data-oid="${o.id}" data-cur="${o.status}">${statusOpts}</select>
+      </td>
+      <td>${dt}</td>
+      <td>
+        <button class="btn btn-save btn-sm" onclick="saveOrderStatus('${o.id}', this)">✔ اعمال</button>
+        <button class="btn btn-sm" style="background:#f1f5f9;color:#374151;margin-right:4px"
+          onclick="showItems('${o.id}')">📋 جزئیات</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveOrderStatus(oid, btn) {
+  const row = btn.closest('tr');
+  const sel = row.querySelector('.status-select');
+  const newStatus = sel.value;
+  if (newStatus === sel.dataset.cur) { toast('وضعیت تغییری نکرده', ''); return; }
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    await apiFetch(`/shop/orders/${oid}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({status: newStatus})
+    });
+    sel.dataset.cur = newStatus;
+    const o = allOrders.find(x=>x.id===oid);
+    if (o) o.status = newStatus;
+    toast(`وضعیت → ${STATUS_LABEL[newStatus]} ✓`, 'ok');
+    updateOrderStats();
+  } catch(e) {
+    sel.value = sel.dataset.cur;
+    toast('خطا: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✔ اعمال';
+  }
+}
+
+function showItems(oid) {
+  const o = allOrders.find(x=>x.id===oid);
+  if (!o) return;
+  const items = Array.isArray(o.items) ? o.items : [];
+  const rows = items.map(i =>
+    `${i.name_fa} × ${i.quantity}  →  ${(i.unit_price*i.quantity).toLocaleString('fa-IR')} ت`
+  ).join('\n');
+  alert(`سفارش ${o.order_no}\nمشتری: ${o.customer_name}\nآدرس: ${o.customer_address}\n\nاقلام:\n${rows}\n\nجمع: ${o.total_amount.toLocaleString('fa-IR')} ت`);
+}
+
+document.getElementById('ord-status-filter').addEventListener('change', () => { if(ADMIN_KEY) loadOrders(); });
+document.getElementById('btn-reload-orders').addEventListener('click', () => { if(ADMIN_KEY) loadOrders(); });
+</script>
+<!-- CLINCORE SHOP PATCH -->
+<div id="modal-new-prod" onclick="if(event.target===this)closeNewProd()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1c2030;border:1px solid #2a3040;border-radius:12px;padding:28px;width:540px;max-width:96vw;box-shadow:0 12px 40px rgba(0,0,0,.6);">
+    <h3 style="margin:0 0 18px;font-size:15px;color:#dde3f0;">+ محصول جدید</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">نام انگلیسی *</label>
+        <input id="np-name" placeholder="Arsenicum album" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">نام فارسی *</label>
+        <input id="np-fa" placeholder="آرسنیکوم آلبوم" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">دسته‌بندی *</label>
+        <input id="np-cat" placeholder="Remedies" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">قیمت (ریال) *</label>
+        <input id="np-price" type="number" min="0" placeholder="150000" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">واحد</label>
+        <input id="np-unit" value="عدد" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">SKU (اختیاری)</label>
+        <input id="np-sku" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">موجودی اولیه</label>
+        <input id="np-stock" type="number" value="0" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">حد هشدار</label>
+        <input id="np-thr" type="number" value="5" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+      <div style="grid-column:span 2"><label style="font-size:11px;color:#889;display:block;margin-bottom:3px;">توضیحات</label>
+        <input id="np-desc" style="width:100%;padding:7px 9px;background:#252b3b;border:1px solid #2a3040;border-radius:6px;color:#dde3f0;font-size:13px;box-sizing:border-box;"></div>
+    </div>
+    <div id="np-err" style="color:#f87171;font-size:12px;margin-top:8px;display:none;padding:7px 10px;background:rgba(248,113,113,.1);border-radius:5px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+      <button onclick="closeNewProd()" style="padding:7px 18px;border-radius:6px;border:1px solid #2a3040;background:transparent;color:#889;cursor:pointer;font-size:13px;">انصراف</button>
+      <button onclick="submitNewProd()" id="np-submit" style="padding:7px 20px;border-radius:6px;border:none;background:#4f8ef7;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">ذخیره</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function _base(){
+    if(typeof API_BASE!="undefined")return API_BASE;
+    if(typeof BASE!="undefined")return BASE;
+    var m=document.documentElement.innerHTML.match(/https?:\/\/127\.0\.0\.1:\d+/);
+    return m?m[0]:"http://127.0.0.1:8000";
+  }
+  function _akey(){
+    if(typeof SUPER_ADMIN_KEY!="undefined")return SUPER_ADMIN_KEY;
+    if(typeof ADMIN_KEY!="undefined")return ADMIN_KEY;
+    var ss=document.querySelectorAll("script:not([src])");
+    for(var i=0;i<ss.length;i++){
+      var m=ss[i].textContent.match(/"X-Super-Admin-Key"\s*:\s*"([^"]+)"/);
+      if(m)return m[1];
+      m=ss[i].textContent.match(/ADMIN_KEY\s*=\s*"([^"]+)"/);
+      if(m)return m[1];
+    }
+    return "";
+  }
+  function injectBtn(){
+    if(document.getElementById("_np_btn"))return;
+    var rb=null,btns=document.querySelectorAll("button");
+    for(var i=0;i<btns.length;i++){
+      var b=btns[i];
+      if((b.id&&/reload.product/i.test(b.id))||
+         (b.onclick&&/loadProduct|reloadProduct/i.test(b.onclick.toString()))||
+         /\u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06cc/i.test(b.textContent)||
+         b.textContent.indexOf("Refresh")>=0){rb=b;break;}
+    }
+    if(!rb){setTimeout(injectBtn,700);return;}
+    var btn=document.createElement("button");
+    btn.id="_np_btn";btn.textContent="+ \u0645\u062d\u0635\u0648\u0644 \u062c\u062f\u06cc\u062f";
+    var cs=window.getComputedStyle(rb);
+    btn.style.cssText="padding:"+cs.padding+";border-radius:"+cs.borderRadius+
+      ";border:none;background:#4f8ef7;color:#fff;cursor:pointer;"+
+      "font-size:"+cs.fontSize+";margin-right:6px;font-weight:600;";
+    btn.onclick=function(){openNewProd();};
+    rb.parentNode.insertBefore(btn,rb);
+  }
+  var obs=new MutationObserver(function(){
+    document.querySelectorAll("tbody tr:not([data-del-ok])").forEach(function(tr){
+      var id=tr.dataset.id||tr.dataset.productId||"";
+      if(!id){for(var c=0;c<Math.min(tr.cells.length,3);c++){
+        var v=(tr.cells[c]?tr.cells[c].textContent:"").trim();
+        if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(v)){id=v;break;}
+      }}
+      if(!id)return;
+      tr.dataset.delOk="1";
+      var last=tr.cells[tr.cells.length-1];if(!last)return;
+      var d=document.createElement("button");
+      d.textContent="\uD83D\uDDD1";d.title="del";
+      d.style.cssText="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:13px;margin-left:4px;";
+      d.onmouseover=function(){this.style.background="#991b1b";};
+      d.onmouseout=function(){this.style.background="#7f1d1d";};
+      d.onclick=function(){deleteProd(id,tr);};
+      last.appendChild(d);
+    });
+  });
+  obs.observe(document.body,{childList:true,subtree:true});
+  window.openNewProd=function(){
+    var m=document.getElementById("modal-new-prod");
+    m.style.display="flex";
+    document.getElementById("np-err").style.display="none";
+    setTimeout(function(){document.getElementById("np-name").focus();},50);
+  };
+  window.closeNewProd=function(){document.getElementById("modal-new-prod").style.display="none";};
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeNewProd();});
+  window.submitNewProd=async function(){
+    var err=document.getElementById("np-err");err.style.display="none";
+    var sb=document.getElementById("np-submit");
+    var name=document.getElementById("np-name").value.trim();
+    var nfa=document.getElementById("np-fa").value.trim();
+    var cat=document.getElementById("np-cat").value.trim();
+    var price=parseFloat(document.getElementById("np-price").value)||0;
+    var unit=document.getElementById("np-unit").value.trim()||"\u0639\u062f\u062f";
+    var sku=document.getElementById("np-sku").value.trim();
+    var desc=document.getElementById("np-desc").value.trim();
+    var stock=parseInt(document.getElementById("np-stock").value)||0;
+    var thr=parseInt(document.getElementById("np-thr").value)||5;
+    if(!name||!nfa||!cat){err.textContent="\u0646\u0627\u0645 \u0627\u0644\u0632\u0627\u0645\u06cc \u0627\u0633\u062a.";err.style.display="block";return;}
+    var ak=_akey();if(!ak)ak=prompt("X-Super-Admin-Key:")||"";
+    sb.disabled=true;sb.textContent="...";
+    try{
+      var r=await fetch(_base()+"/shop/products",{method:"POST",
+        headers:{"Content-Type":"application/json","X-Super-Admin-Key":ak},
+        body:JSON.stringify({name:name,name_fa:nfa,category:cat,price:price,
+          unit:unit,sku:sku,description:desc,stock_quantity:stock,stock_alert_threshold:thr,is_active:true})});
+      if(!r.ok){var t=await r.text();throw new Error(r.status+" "+t);}
+      closeNewProd();
+      ["np-name","np-fa","np-cat","np-price","np-sku","np-desc"].forEach(function(id){document.getElementById(id).value="";});
+      document.getElementById("np-stock").value="0";document.getElementById("np-thr").value="5";
+      if(typeof loadProducts=="function")loadProducts();
+      else if(typeof reloadProducts=="function")reloadProducts();
+      else location.reload();
+    }catch(e){err.textContent=e.message;err.style.display="block";}
+    finally{sb.disabled=false;sb.textContent="\u0630\u062e\u06cc\u0631\u0647";}
+  };
+  window.deleteProd=async function(id,tr){
+    if(!confirm("\u062d\u0630\u0641 \u0634\u0648\u062f\u061f"))return;
+    var ak=_akey();if(!ak)ak=prompt("X-Super-Admin-Key:")||"";
+    var btn=tr.querySelector("button[title=\"del\"]");if(btn)btn.disabled=true;
+    try{
+      var r=await fetch(_base()+"/shop/products/"+id,{method:"DELETE",headers:{"X-Super-Admin-Key":ak}});
+      if(!r.ok){var t=await r.text();throw new Error(r.status+" "+t);}
+      tr.style.transition="opacity .3s,transform .3s";tr.style.opacity="0";tr.style.transform="translateX(20px)";
+      setTimeout(function(){tr.remove();},300);
+    }catch(e){alert(e.message);if(btn)btn.disabled=false;}
+  };
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",injectBtn);
+  else setTimeout(injectBtn,400);
+})();
+</script>
+<!-- END CLINCORE SHOP PATCH -->
+</body>
+</html>

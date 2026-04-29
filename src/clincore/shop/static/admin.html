@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClinCore | پنل مدیریت هوشمند</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #e11d48;
+            --success: #10b981;
+            --sidebar-width: 260px;
+            --transition: all 0.3s ease;
+        }
+        [data-theme="dark"] {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Vazirmatn', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--transition); }
+        aside { width: var(--sidebar-width); background: var(--bg-card); border-left: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; right: 0; z-index: 1000; transition: var(--transition); }
+        .sidebar-header { padding: 2rem; font-size: 1.5rem; font-weight: 800; color: var(--primary); border-bottom: 1px solid var(--border); }
+        nav { padding: 1rem; flex: 1; }
+        nav a { display: block; padding: 0.75rem 1rem; color: var(--text-main); text-decoration: none; border-radius: 8px; margin-bottom: 0.5rem; transition: var(--transition); }
+        nav a:hover, nav a.active { background: var(--primary); color: white; }
+        main { flex: 1; margin-right: var(--sidebar-width); padding: 2rem; max-width: 100%; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th { text-align: right; color: var(--text-muted); padding: 1rem; border-bottom: 2px solid var(--border); }
+        td { padding: 1rem; border-bottom: 1px solid var(--border); }
+        .btn { padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: var(--transition); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); margin-top: 0.5rem; }
+        .loader { display: none; width: 24px; height: 24px; border: 3px solid var(--border); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 768px) { aside { transform: translateX(100%); } aside.open { transform: translateX(0); } main { margin-right: 0; } .mobile-toggle { display: block !important; } }
+    </style>
+</head>
+<body>
+    <aside id="sidebar">
+        <div class="sidebar-header">ClinCore Admin</div>
+        <nav>
+            <a href="#dashboard" id="nav-dashboard">📊 داشبورد</a>
+            <a href="#products" id="nav-products">📦 محصولات</a>
+            <a href="#orders" id="nav-orders">📜 سفارشات</a>
+            <a href="#visit" id="nav-visit">🏥 ویزیت MCARE</a>
+            <a href="#settings" id="nav-settings">⚙️ تنظیمات</a>
+        </nav>
+    </aside>
+    <main>
+        <header>
+            <button class="btn btn-primary mobile-toggle" onclick="toggleSidebar()" style="display:none;">☰</button>
+            <h1 id="view-title">داشبورد</h1>
+            <div style="display:flex; gap:1rem; align-items:center;">
+                <div id="global-loader" class="loader"></div>
+                <button onclick="toggleTheme()" class="btn" style="background:var(--border)">🌓</button>
+            </div>
+        </header>
+        <div id="content-root"></div>
+    </main>
+    <script>
+        // --- CONFIGURATION ---
+        const CONFIG = {
+            API_BASE: "http://localhost:8000",
+            STATUS_LABELS: {
+                pending_payment: "در انتظار پرداخت",
+                confirmed: "تأیید شده",
+                processing: "در حال پردازش",
+                shipped: "ارسال شده",
+                delivered: "تحویل داده شده",
+                cancelled: "لغو شده"
+            }
+        };
+
+        // --- IN-MEMORY STATE ---
+        const state = { superAdminKey: "", isLoading: false };
+
+        // --- UTILITIES ---
+        const toggleTheme = () => {
+            const doc = document.documentElement;
+            doc.setAttribute('data-theme', doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        };
+        const toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
+        const setLoading = (val) => {
+            state.isLoading = val;
+            document.getElementById('global-loader').style.display = val ? 'block' : 'none';
+        };
+
+        // --- API HANDLER ---
+        async function apiRequest(endpoint, method = 'GET', body = null, useAdminKey = true) {
+            if (useAdminKey && !state.superAdminKey) {
+                window.location.hash = "#settings";
+                return null;
+            }
+            setLoading(true);
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (useAdminKey) headers['X-Super-Admin-Key'] = state.superAdminKey;
+                const options = { method, headers };
+                if (body) options.body = JSON.stringify(body);
+                const response = await fetch(`${CONFIG.API_BASE}${endpoint}`, options);
+                if (response.status === 401) { alert("کلید دسترسی نامعتبر است."); window.location.hash = "#settings"; return null; }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('content-root').innerHTML += `<div class="card" style="color:var(--danger)">خطا: ${err.message}</div>`;
+                return null;
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // --- RENDERERS ---
+        const root = () => document.getElementById('content-root');
+
+        async function renderDashboard() {
+            root().innerHTML = '<p>در حال بارگذاری آمار...</p>';
+            const [products, orders] = await Promise.all([
+                apiRequest('/super-admin/products?page_size=1'),
+                apiRequest('/super-admin/orders?page_size=200')
+            ]);
+            if (!products || !orders) return;
+            const totalRevenue = (orders.orders || []).reduce((acc, o) => acc + (o.total_amount || 0), 0);
+            root().innerHTML = `
+                <div class="grid">
+                    <div class="card"><h3>📦 کل محصولات</h3><p style="font-size:2rem;margin-top:.5rem">${products.total}</p></div>
+                    <div class="card"><h3>📜 کل سفارشات</h3><p style="font-size:2rem;margin-top:.5rem">${orders.total}</p></div>
+                    <div class="card"><h3>💰 درآمد کل</h3><p style="font-size:2rem;margin-top:.5rem">${totalRevenue.toLocaleString()} تومان</p></div>
+                </div>`;
+        }
+
+        async function renderProducts() {
+            root().innerHTML = '<p>در حال دریافت لیست محصولات...</p>';
+            const data = await apiRequest('/super-admin/products?page_size=100');
+            if (!data) return;
+            root().innerHTML = `
+                <div class="card">
+                    <input type="text" id="search-input" placeholder="جستجوی نام محصول..." oninput="filterProducts()" style="margin-bottom:1rem">
+                    <table id="products-table">
+                        <thead><tr><th>نام فارسی</th><th>قیمت</th><th>موجودی</th><th>فعال</th><th>عملیات</th></tr></thead>
+                        <tbody id="products-body">
+                            ${(data.products || []).map(p => `
+                                <tr data-name="${(p.name_fa||'').toLowerCase()}">
+                                    <td>${p.name_fa || '-'}</td>
+                                    <td>${(p.price||0).toLocaleString()}</td>
+                                    <td>${p.stock_quantity ?? '-'}</td>
+                                    <td>${p.is_active ? '✅' : '❌'}</td>
+                                    <td><button class="btn btn-primary" onclick="editProduct('${p.id}','${p.price}','${p.stock_quantity}')">ویرایش</button></td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        window.filterProducts = () => {
+            const q = document.getElementById('search-input').value.toLowerCase();
+            document.querySelectorAll('#products-body tr').forEach(tr => {
+                tr.style.display = tr.dataset.name.includes(q) ? '' : 'none';
+            });
+        };
+
+        async function renderOrders() {
+            root().innerHTML = '<p>در حال دریافت لیست سفارشات...</p>';
+            const data = await apiRequest('/super-admin/orders?page_size=100');
+            if (!data) return;
+            root().innerHTML = `
+                <div class="card">
+                    <table>
+                        <thead><tr><th>شماره سفارش</th><th>مشتری</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th><th>عملیات</th></tr></thead>
+                        <tbody>
+                            ${(data.orders || []).map(o => `
+                                <tr>
+                                    <td>${o.order_no || o.id.slice(0,8)}</td>
+                                    <td>${o.customer_name || 'نامشخص'}</td>
+                                    <td>${(o.total_amount||0).toLocaleString()}</td>
+                                    <td>
+                                        <select onchange="updateOrderStatus('${o.id}', this.value)">
+                                            ${Object.entries(CONFIG.STATUS_LABELS).map(([k,v]) =>
+                                                `<option value="${k}" ${o.status===k?'selected':''}>${v}</option>`
+                                            ).join('')}
+                                        </select>
+                                    </td>
+                                    <td>${o.created_at ? new Date(o.created_at).toLocaleDateString('fa-IR') : '-'}</td>
+                                    <td><button class="btn btn-danger" onclick="deleteOrder('${o.id}')">حذف</button></td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderVisit() {
+            root().innerHTML = `
+                <div class="card">
+                    <h3>تحلیل هوشمند ویزیت — MCARE</h3>
+                    <textarea id="complaint-input" rows="6" placeholder="شکایت بیمار را به فارسی وارد کنید..."></textarea>
+                    <button class="btn btn-primary" style="margin-top:1rem" onclick="submitMcare()">شروع تحلیل</button>
+                </div>
+                <div id="mcare-results"></div>`;
+        }
+
+        window.submitMcare = async () => {
+            const text = document.getElementById('complaint-input').value.trim();
+            if (!text) return alert("لطفاً متن شکایت را وارد کنید.");
+            // MCARE does not require admin key
+            const res = await apiRequest('/mcare/auto', 'POST', { text }, false);
+            if (!res) return;
+            // Handle flexible response shape
+            const remedies = res.remedies || res.top_remedies || res.results || [];
+            document.getElementById('mcare-results').innerHTML = `
+                <div class="card">
+                    <h3>نتایج پیشنهادی</h3>
+                    <table>
+                        <thead><tr><th>داروی هومیوپاتیک</th><th>امتیاز</th></tr></thead>
+                        <tbody>
+                            ${remedies.length
+                                ? remedies.map(r => `<tr><td>${r.name||r.remedy||r.remedy_name||JSON.stringify(r)}</td><td>${(r.score||r.total_score||'-')}</td></tr>`).join('')
+                                : `<tr><td colspan="2">نتیجه‌ای یافت نشد — پاسخ خام: <code>${JSON.stringify(res).slice(0,200)}</code></td></tr>`
+                            }
+                        </tbody>
+                    </table>
+                </div>`;
+        };
+
+        function renderSettings() {
+            root().innerHTML = `
+                <div class="card" style="max-width:500px">
+                    <h3>تنظیمات امنیتی</h3>
+                    <p style="color:var(--text-muted);font-size:.9rem;margin-top:.5rem">کلید فقط در حافظه مرورگر باقی می‌ماند.</p>
+                    <div style="margin-top:1.5rem">
+                        <label>X-Super-Admin-Key</label>
+                        <input type="password" id="key-input" value="${state.superAdminKey}" placeholder="کلید را وارد کنید">
+                        <button class="btn btn-primary" style="margin-top:1rem;width:100%" onclick="saveKey()">ذخیره و ادامه</button>
+                    </div>
+                    <div style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1rem">
+                        <small>Base URL: <code>${CONFIG.API_BASE}</code></small>
+                    </div>
+                </div>`;
+        }
+
+        // --- ACTIONS ---
+        window.saveKey = () => {
+            state.superAdminKey = document.getElementById('key-input').value.trim();
+            if (!state.superAdminKey) return alert("کلید خالی است.");
+            alert("کلید ذخیره شد.");
+            window.location.hash = "#dashboard";
+        };
+
+        window.updateOrderStatus = async (id, status) => {
+            const ok = await apiRequest(`/super-admin/orders/${id}/status`, 'PATCH', { status });
+            if (ok) alert("وضعیت بروزرسانی شد.");
+        };
+
+        window.deleteOrder = async (id) => {
+            if (!confirm("آیا از حذف این سفارش مطمئنید؟")) return;
+            const ok = await apiRequest(`/super-admin/orders/${id}`, 'DELETE');
+            if (ok !== null) renderOrders();
+        };
+
+        window.editProduct = async (id, currentPrice, currentStock) => {
+            const price = prompt("قیمت جدید:", currentPrice);
+            const stock = prompt("موجودی جدید:", currentStock);
+            if (price !== null && stock !== null) {
+                await apiRequest(`/super-admin/products/${id}`, 'PATCH', {
+                    price: parseFloat(price),
+                    stock_quantity: parseInt(stock)
+                });
+                renderProducts();
+            }
+        };
+
+        // --- ROUTER ---
+        function router() {
+            const hash = window.location.hash || '#dashboard';
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            const nav = document.getElementById(`nav-${hash.slice(1)}`);
+            if (nav) nav.classList.add('active');
+            const titles = { '#dashboard':'داشبورد', '#products':'مدیریت محصولات', '#orders':'مدیریت سفارشات', '#visit':'ویزیت MCARE', '#settings':'تنظیمات' };
+            document.getElementById('view-title').innerText = titles[hash] || '';
+            const renders = { '#dashboard':renderDashboard, '#products':renderProducts, '#orders':renderOrders, '#visit':renderVisit, '#settings':renderSettings };
+            if (renders[hash]) renders[hash]();
+            else root().innerHTML = '<h2>یافت نشد</h2>';
+        }
+
+        window.addEventListener('hashchange', router);
+        window.addEventListener('load', () => {
+            if (!state.superAdminKey) window.location.hash = '#settings';
+            else router();
+        });
+    </script>
+</body>
+</html>

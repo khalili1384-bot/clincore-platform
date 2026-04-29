@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClinCore Admin</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--teal:#01696f;--teal-dark:#0c4e54;--teal-light:#cedcd8;--bg:#f7f6f2;--surface:#fff;--text:#28251d;--muted:#7a7974;--border:#dcd9d5;--red:#a12c7b;--radius:10px}
+body{font-family:Vazirmatn,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+button{cursor:pointer;border:none;font-family:inherit}
+input,select,textarea{font-family:inherit}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:var(--surface);border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.1);text-align:center}
+.login-logo{font-size:1.3rem;font-weight:800;color:var(--teal);margin-bottom:.4rem}
+.login-sub{color:var(--muted);font-size:.85rem;margin-bottom:1.8rem}
+.login-box input{width:100%;padding:.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-size:.95rem;margin-bottom:1rem;outline:none;background:var(--bg)}
+.login-box input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-light)}
+.btn-login{width:100%;background:var(--teal);color:#fff;border-radius:50px;padding:.75rem;font-size:1rem;font-weight:700;transition:.2s}
+.btn-login:hover{background:var(--teal-dark)}
+.login-err{color:var(--red);font-size:.82rem;margin-top:.6rem;min-height:1.2rem}
+
+/* HEADER */
+#mainPanel{display:none}
+.header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.header-inner{max-width:1300px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:60px}
+.logo{font-weight:800;font-size:1.1rem;color:var(--teal);flex:1}
+.btn-logout{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;padding:.35rem .9rem;font-size:.82rem;transition:.2s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* TABS */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border)}
+.tabs-inner{max-width:1300px;margin:0 auto;padding:0 1.5rem;display:flex;gap:.25rem}
+.tab-btn{padding:.7rem 1.2rem;background:transparent;border-bottom:2px solid transparent;color:var(--muted);font-size:.9rem;font-family:inherit;transition:.2s}
+.tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:700}
+
+/* MAIN */
+.main{max-width:1300px;margin:0 auto;padding:1.5rem}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:.75rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{padding:.5rem .9rem;border:1px solid var(--border);border-radius:50px;font-size:.85rem;background:var(--bg);outline:none;transition:.2s}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--teal)}
+.toolbar input{flex:1;min-width:180px;max-width:320px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:.65rem 1rem;text-align:right;font-size:.83rem;border-bottom:1px solid var(--border)}
+th{background:var(--bg);font-weight:700;color:var(--muted);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(1,105,111,.03)}
+
+/* INLINE EDIT */
+.edit-input{padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;font-size:.82rem;width:90px;font-family:inherit}
+.edit-input:focus{border-color:var(--teal);outline:none}
+
+/* BUTTONS */
+.btn-edit{background:var(--teal-light);color:var(--teal-dark);border-radius:6px;padding:.3rem .7rem;font-size:.78rem;transition:.2s}
+.btn-edit:hover{background:var(--teal);color:#fff}
+.btn-save{background:var(--teal);color:#fff;border-radius:6px;padding:.3rem .7rem;font-size:.78rem;transition:.2s}
+.btn-save:hover{background:var(--teal-dark)}
+.btn-cancel{background:var(--bg);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:.3rem .7rem;font-size:.78rem;transition:.2s}
+.btn-cancel:hover{border-color:var(--red);color:var(--red)}
+.btn-del{background:#fdeef7;color:var(--red);border-radius:6px;padding:.3rem .7rem;font-size:.78rem;transition:.2s}
+.btn-del:hover{background:var(--red);color:#fff}
+
+/* STATUS PILLS */
+.pill{padding:.2rem .6rem;border-radius:50px;font-size:.72rem;font-weight:600}
+.s-pending_payment{background:#e7d7c4;color:#da7101}
+.s-confirmed{background:#d4dfcc;color:#437a22}
+.s-processing{background:#c6d8e4;color:#006494}
+.s-shipped{background:#c6d8e4;color:#275f8e}
+.s-delivered{background:#d4dfcc;color:#2e5c10}
+.s-cancelled{background:#e0ced7;color:var(--red)}
+
+/* STATUS SELECT */
+.status-sel{padding:.25rem .5rem;border-radius:6px;font-family:inherit;font-size:.78rem;border:1px solid var(--border);background:var(--bg)}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;gap:.5rem;margin-top:1rem;justify-content:flex-end}
+.pagination button{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .8rem;font-family:inherit;font-size:.82rem;transition:.2s}
+.pagination button:hover:not(:disabled){border-color:var(--teal);color:var(--teal)}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+.page-info{font-size:.82rem;color:var(--muted)}
+
+/* LOADER / ERROR */
+.loader{text-align:center;padding:2.5rem;color:var(--muted)}
+.err-msg{color:var(--red);font-size:.82rem;padding:.4rem 0}
+.inline-err{color:var(--red);font-size:.75rem;margin-top:.2rem}
+
+/* ACTIVE BADGE */
+.badge-on{background:#d4dfcc;color:#437a22;padding:.15rem .5rem;border-radius:50px;font-size:.72rem}
+.badge-off{background:#e0ced7;color:var(--red);padding:.15rem .5rem;border-radius:50px;font-size:.72rem}
+
+@media(max-width:768px){
+  .header-inner,.tabs-inner,.main{padding:0 .75rem}
+  .main{padding-top:1rem}
+  th,td{padding:.5rem .6rem;font-size:.75rem}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">⚕ ClinCore Admin</div>
+    <div class="login-sub">پنل مدیریت سوپر ادمین</div>
+    <input type="password" id="keyInput" placeholder="کلید دسترسی را وارد کنید" autocomplete="off">
+    <button class="btn-login" onclick="doLogin()">ورود به پنل مدیریت</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- MAIN PANEL -->
+<div id="mainPanel">
+  <div class="header">
+    <div class="header-inner">
+      <div class="logo">⚕ ClinCore Admin</div>
+      <button class="btn-logout" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tabs-inner">
+      <button class="tab-btn active" onclick="switchTab('products',this)">محصولات</button>
+      <button class="tab-btn" onclick="switchTab('orders',this)">سفارشات</button>
+    </div>
+  </div>
+  <div class="main">
+    <!-- PRODUCTS TAB -->
+    <div id="tab-products">
+      <div class="toolbar">
+        <input type="search" id="prodSearch" placeholder="جستجو در محصولات..." oninput="debounceProd()">
+        <select id="catFilter" onchange="loadProducts(1)">
+          <option value="">همه دسته‌ها</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>نام فارسی</th><th>دسته</th><th>قیمت (تومان)</th>
+            <th>موجودی</th><th>وضعیت</th><th>ویرایش</th>
+          </tr></thead>
+          <tbody id="prodBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="prodPager"></div>
+    </div>
+
+    <!-- ORDERS TAB -->
+    <div id="tab-orders" style="display:none">
+      <div class="toolbar">
+        <select id="statusFilter" onchange="loadOrders(1)">
+          <option value="">همه وضعیت‌ها</option>
+          <option value="pending_payment">در انتظار پرداخت</option>
+          <option value="confirmed">تأیید شده</option>
+          <option value="processing">در حال پردازش</option>
+          <option value="shipped">ارسال شده</option>
+          <option value="delivered">تحویل داده شده</option>
+          <option value="cancelled">لغو شده</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>شماره</th><th>بیمار</th><th>مشتری</th><th>تلفن</th>
+            <th>اقلام</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th><th>عملیات</th>
+          </tr></thead>
+          <tbody id="ordBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="ordPager"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = ''
+const STATUS_FA = {
+  pending_payment:'در انتظار پرداخت',
+  confirmed:'تأیید شده',
+  processing:'در حال پردازش',
+  shipped:'ارسال شده',
+  delivered:'تحویل داده شده',
+  cancelled:'لغو شده'
+}
+let adminKey = ''
+let prodPage = 1, ordPage = 1
+let prodTimer = null
+
+async function apiFetch(url, opts={}) {
+  const res = await fetch(API + url, {
+    ...opts,
+    headers: {'X-Super-Admin-Key': adminKey, 'Content-Type': 'application/json', ...(opts.headers||{})}
+  })
+  if (res.status === 401) { doLogout(); return null }
+  return res
+}
+
+async function doLogin() {
+  const key = document.getElementById('keyInput').value.trim()
+  if (!key) return
+  adminKey = key
+  const res = await fetch(API + '/super-admin/products?pagesize=1', {headers:{'X-Super-Admin-Key':key}})
+  if (res.status === 401) {
+    document.getElementById('loginErr').textContent = 'کلید دسترسی اشتباه است'
+    adminKey = ''
+    return
+  }
+  document.getElementById('loginErr').textContent = ''
+  document.getElementById('loginScreen').style.display = 'none'
+  document.getElementById('mainPanel').style.display = 'block'
+  await populateCatFilter()
+  await loadProducts(1)
+}
+
+document.getElementById('keyInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin() })
+
+function doLogout() {
+  adminKey = ''
+  document.getElementById('loginScreen').style.display = 'flex'
+  document.getElementById('mainPanel').style.display = 'none'
+  document.getElementById('keyInput').value = ''
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  document.getElementById('tab-products').style.display = name==='products'?'block':'none'
+  document.getElementById('tab-orders').style.display = name==='orders'?'block':'none'
+  if (name==='orders') loadOrders(1)
+}
+
+async function populateCatFilter() {
+  const res = await apiFetch('/shop/products/categories')
+  if (!res) return
+  const data = await res.json()
+  const sel = document.getElementById('catFilter')
+  ;(data.categories||[]).forEach(c => {
+    const o = document.createElement('option')
+    o.value = c.name; o.textContent = `${c.name} (${c.count})`
+    sel.appendChild(o)
+  })
+}
+
+function debounceProd() {
+  clearTimeout(prodTimer)
+  prodTimer = setTimeout(()=>loadProducts(1), 350)
+}
+
+async function loadProducts(page) {
+  prodPage = page
+  const search = document.getElementById('prodSearch').value
+  const cat = document.getElementById('catFilter').value
+  let url = `/super-admin/products?page=${page}&pagesize=50`
+  if (search) url += `&search=${encodeURIComponent(search)}`
+  if (cat) url += `&category=${encodeURIComponent(cat)}`
+  document.getElementById('prodBody').innerHTML = '<tr><td colspan="6" class="loader">در حال بارگذاری...</td></tr>'
+  const res = await apiFetch(url)
+  if (!res) return
+  const data = await res.json()
+  renderProducts(data.products||[], data.total||0, page)
+}
+
+function renderProducts(products, total, page) {
+  const tbody = document.getElementById('prodBody')
+  if (!products.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="loader">محصولی یافت نشد</td></tr>'
+    document.getElementById('prodPager').innerHTML = ''
+    return
+  }
+  tbody.innerHTML = products.map(p => `
+    <tr id="row-${p.id}">
+      <td>${p.name_fa||p.name}</td>
+      <td>${p.category||'-'}</td>
+      <td>${(p.price||0).toLocaleString('fa-IR')}</td>
+      <td>${(p.stock_quantity??0).toLocaleString('fa-IR')}</td>
+      <td><span class="${p.is_active?'badge-on':'badge-off'}">${p.is_active?'فعال':'غیرفعال'}</span></td>
+      <td><button class="btn-edit" onclick="startEdit('${p.id}',${p.price},${p.stock_quantity??0},${p.is_active})">ویرایش</button></td>
+    </tr>
+    <tr id="edit-${p.id}" style="display:none;background:#f0f8f8">
+      <td colspan="6">
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;padding:.25rem 0">
+          <label style="font-size:.8rem">قیمت: <input class="edit-input" id="ep-${p.id}" type="number" value="${p.price}"></label>
+          <label style="font-size:.8rem">موجودی: <input class="edit-input" id="es-${p.id}" type="number" value="${p.stock_quantity??0}"></label>
+          <label style="font-size:.8rem;display:flex;gap:.3rem;align-items:center">
+            <input type="checkbox" id="ea-${p.id}" ${p.is_active?'checked':''}> فعال
+          </label>
+          <button class="btn-save" onclick="saveEdit('${p.id}')">ذخیره</button>
+          <button class="btn-cancel" onclick="cancelEdit('${p.id}')">انصراف</button>
+          <span class="inline-err" id="ee-${p.id}"></span>
+        </div>
+      </td>
+    </tr>
+  `).join('')
+  renderPager('prodPager', page, total, 50, loadProducts)
+}
+
+function startEdit(id, price, stock, active) {
+  document.getElementById(`row-${id}`).style.display='none'
+  document.getElementById(`edit-${id}`).style.display=''
+}
+function cancelEdit(id) {
+  document.getElementById(`row-${id}`).style.display=''
+  document.getElementById(`edit-${id}`).style.display='none'
+}
+async function saveEdit(id) {
+  const price = parseFloat(document.getElementById(`ep-${id}`).value)
+  const stock = parseInt(document.getElementById(`es-${id}`).value)
+  const active = document.getElementById(`ea-${id}`).checked
+  const errEl = document.getElementById(`ee-${id}`)
+  errEl.textContent = ''
+  const res = await apiFetch(`/super-admin/products/${id}`, {
+    method:'PATCH',
+    body: JSON.stringify({price, stock_quantity:stock, is_active:active})
+  })
+  if (!res) return
+  if (!res.ok) { const d=await res.json(); errEl.textContent=d.detail||'خطا'; return }
+  await loadProducts(prodPage)
+}
+
+async function loadOrders(page) {
+  ordPage = page
+  const status = document.getElementById('statusFilter').value
+  let url = `/super-admin/orders?page=${page}&pagesize=50`
+  if (status) url += `&status=${status}`
+  document.getElementById('ordBody').innerHTML = '<tr><td colspan="9" class="loader">در حال بارگذاری...</td></tr>'
+  const res = await apiFetch(url)
+  if (!res) return
+  const data = await res.json()
+  renderOrders(data.orders||[], data.total||0, page)
+}
+
+function renderOrders(orders, total, page) {
+  const tbody = document.getElementById('ordBody')
+  if (!orders.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="loader">سفارشی یافت نشد</td></tr>'
+    document.getElementById('ordPager').innerHTML = ''
+    return
+  }
+  tbody.innerHTML = orders.map(o => {
+    const items = Array.isArray(o.items)?o.items:[]
+    const itemStr = items.map(i=>`${i.name_fa||''} ×${i.quantity}`).join(' | ')
+    const statusCls = 's-'+(o.status||'')
+    const statusOpts = Object.entries(STATUS_FA).map(([v,l])=>
+      `<option value="${v}" ${o.status===v?'selected':''}>${l}</option>`
+    ).join('')
+    return `<tr>
+      <td><strong>${o.order_no}</strong></td>
+      <td style="font-size:.75rem;color:var(--teal)">${o.patient_no||'-'}</td>
+      <td>${o.customer_name}</td>
+      <td dir="ltr">${o.customer_phone}</td>
+      <td style="max-width:200px;font-size:.75rem">${itemStr}</td>
+      <td><strong>${(o.total_amount||0).toLocaleString('fa-IR')}</strong></td>
+      <td>
+        <select class="status-sel" onchange="updateOrderStatus('${o.id}',this.value)">
+          ${statusOpts}
+        </select>
+      </td>
+      <td style="font-size:.75rem">${(o.created_at||'').slice(0,10)}</td>
+      <td><button class="btn-del" onclick="deleteOrder('${o.id}','${o.order_no}')">حذف</button></td>
+    </tr>`
+  }).join('')
+  renderPager('ordPager', page, total, 50, loadOrders)
+}
+
+async function updateOrderStatus(id, status) {
+  const res = await apiFetch(`/super-admin/orders/${id}/status`, {
+    method:'PATCH',
+    body: JSON.stringify({status})
+  })
+  if (!res || !res.ok) { alert('خطا در تغییر وضعیت'); await loadOrders(ordPage) }
+}
+
+async function deleteOrder(id, no) {
+  if (!confirm(`آیا از حذف سفارش ${no} مطمئن هستید؟`)) return
+  const res = await apiFetch(`/super-admin/orders/${id}`, {method:'DELETE'})
+  if (!res) return
+  if (!res.ok) { alert('خطا در حذف'); return }
+  await loadOrders(ordPage)
+}
+
+function renderPager(elId, page, total, pagesize, loader) {
+  const pages = Math.ceil(total/pagesize)
+  const el = document.getElementById(elId)
+  el.innerHTML = `
+    <button onclick="(${loader.name})(${page-1})" ${page<=1?'disabled':''}>‹ قبلی</button>
+    <span class="page-info">صفحه ${page.toLocaleString('fa-IR')} از ${pages.toLocaleString('fa-IR')} | ${total.toLocaleString('fa-IR')} مورد</span>
+    <button onclick="(${loader.name})(${page+1})" ${page>=pages?'disabled':''}>بعدی ›</button>
+  `
+}
+</script>
+</body>
+</html>

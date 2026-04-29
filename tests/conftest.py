@@ -9,7 +9,9 @@ if sys.platform == "win32":
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import sessionmaker
 import httpx
 
 DATABASE_URL = os.getenv(
@@ -17,20 +19,59 @@ DATABASE_URL = os.getenv(
     "postgresql+asyncpg://clincore_user:805283631@127.0.0.1:5432/clincore",
 )
 
+# Monkey patch AsyncSessionLocal with NullPool engine for tests
+from clincore.core import db as db_module
+
+_test_engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+db_module.AsyncSessionLocal = sessionmaker(_test_engine, class_=AsyncSession, expire_on_commit=False)
+
 
 @pytest.fixture
-def app_engine():
-    return create_async_engine(DATABASE_URL, pool_pre_ping=True)
+async def app_engine():
+    """Create engine with NullPool to avoid event loop conflicts in tests."""
+    engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+    yield engine
+    await engine.dispose()
 
 
 @pytest.fixture
-def admin_engine():
-    return create_async_engine(DATABASE_URL, pool_pre_ping=True)
+async def admin_engine():
+    """Create engine with NullPool to avoid event loop conflicts in tests."""
+    engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+    yield engine
+    await engine.dispose()
+
+
+@pytest.fixture
+async def test_session():
+    """Create a test session with NullPool engine to avoid event loop conflicts."""
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.ext.asyncio import AsyncSession
+    
+    engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+    TestSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    
+    async with TestSessionLocal() as session:
+        yield session
+    
+    await engine.dispose()
 
 
 @pytest.fixture
 async def async_client():
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as client:
+        yield client
+
+
+@pytest.fixture
+async def test_client():
+    """ASGI test client (no live server needed)."""
+    from httpx import AsyncClient, ASGITransport
+    from clincore.api.main import app
+    
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         yield client
 
 
@@ -95,16 +136,16 @@ async def seed_patients(app_engine, tenants):
         await conn.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": tenant_a})
         await conn.execute(text("DELETE FROM patients WHERE full_name = 'Alice A'"))
         await conn.execute(text("""
-            INSERT INTO patients (id, tenant_id, full_name, created_at)
-            VALUES (gen_random_uuid(), :tid, 'Alice A', now())
+            INSERT INTO patients (id, tenant_id, full_name, patient_no, created_at)
+            VALUES (gen_random_uuid(), :tid, 'Alice A', 1, now())
         """), {"tid": tenant_a})
 
     async with app_engine.begin() as conn:
         await conn.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": tenant_b})
         await conn.execute(text("DELETE FROM patients WHERE full_name = 'Bob B'"))
         await conn.execute(text("""
-            INSERT INTO patients (id, tenant_id, full_name, created_at)
-            VALUES (gen_random_uuid(), :tid, 'Bob B', now())
+            INSERT INTO patients (id, tenant_id, full_name, patient_no, created_at)
+            VALUES (gen_random_uuid(), :tid, 'Bob B', 1, now())
         """), {"tid": tenant_b})
 
     return tenant_a, tenant_b

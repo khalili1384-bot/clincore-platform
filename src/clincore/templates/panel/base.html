@@ -203,7 +203,8 @@
           <div class="form-grid-2">
             <div class="form-row">
               <label data-i18n="patient_id">شناسه بیمار</label>
-              <input type="text" name="patient_id" required>
+              <input type="text" id="encounter-pid-display" readonly style="background:var(--surface-2,#f3f4f6);cursor:default;color:var(--text-muted,#6b7280);" placeholder="شناسه بیمار">
+              <input type="hidden" name="patient_id" id="encounter-pid-uuid">
               <div id="encounter-patient-name" style="font-weight:bold; color: #1a73e8; margin-bottom: 8px; text-align:right;"></div>
             </div>
             <div class="form-row">
