@@ -6,6 +6,7 @@ import asyncio
 import logging
 import sys
 import os
+from contextlib import asynccontextmanager
 
 # Windows event loop fix - MUST be before any async imports
 if sys.platform == "win32":
@@ -19,10 +20,34 @@ from fastapi.responses import JSONResponse
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown."""
+    # Startup
+    logger.info("🚀 ClinCore API starting up...")
+    
+    # Fail-closed check: ensure critical routes exist
+    routes = [route.path for route in app.routes]
+    if "/health" not in routes:
+        logger.error("❌ CRITICAL: /health route not found. Startup failed.")
+        raise RuntimeError("Fail-closed: /health route missing")
+    
+    if "/mcare/auto" not in routes:
+        logger.error("❌ CRITICAL: /mcare/auto route not found. Startup failed.")
+        raise RuntimeError("Fail-closed: /mcare/auto route missing")
+    
+    logger.info(f"✅ ClinCore API started. Available routes: {routes}")
+    
+    yield
+    
+    # Shutdown
+    logger.info("🛑 ClinCore API shutting down...")
+
 app = FastAPI(
     title="ClinCore API",
     version="0.2.0",
     description="Clinical AI platform with tenant isolation and RLS",
+    lifespan=lifespan,
 )
 
 # Mount static files
@@ -353,29 +378,7 @@ except ImportError as e:
 
 
 # ── Startup/Shutdown ────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup_event():
-    """Startup event handler - checks only, no router loading."""
-    logger.info("🚀 ClinCore API starting up...")
-    
-    # Fail-closed check: ensure critical routes exist
-    routes = [route.path for route in app.routes]
-    if "/health" not in routes:
-        logger.error("❌ CRITICAL: /health route not found. Startup failed.")
-        raise RuntimeError("Fail-closed: /health route missing")
-    
-    if "/mcare/auto" not in routes:
-        logger.error("❌ CRITICAL: /mcare/auto route not found. Startup failed.")
-        raise RuntimeError("Fail-closed: /mcare/auto route missing")
-    
-    logger.info(f"✅ ClinCore API started. Available routes: {routes}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Shutdown event handler."""
-    logger.info("🛑 ClinCore API shutting down...")
+# (Moved to lifespan handler above)
 
 # Shop frontend
 _frontend = r'D:\clincore-platform\frontend'
