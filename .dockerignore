@@ -1,12 +1,12 @@
-# .dockerignore
-__pycache__/
+.venv311
+.venv
+__pycache__
 *.pyc
 *.pyo
-*.pyd
-.venv/
-venv/
+.pytest_cache
+tests/
 .env
-.git/
-.gitignore
-*.db-shm
-*.db-wal
+.env.prod
+*.log
+.git
+node_modules
