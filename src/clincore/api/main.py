@@ -50,6 +50,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Health check endpoint
+@app.get("/health", tags=["system"])
+async def health_check():
+    return {"status": "ok", "version": "0.2.0"}
+
 # Mount static files
 import pathlib as _pathlib
 app.mount(
